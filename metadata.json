@@ -1,0 +1,6 @@
+{
+  "name": "subiksha teacher",
+  "description": "subiksha teacher - வாங்க படிக்கலாம்: Smart interactive educational platform with Gemini AI chat, mental maths, spoken English, and interactive learning.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

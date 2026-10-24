@@ -178,22 +178,9 @@ fun HomeScreenWrapper(
     onKeyClick: () -> Unit,
     onProfileClick: () -> Unit
 ) {
-    Scaffold(
-        topBar = {
-            AppHeader(
-                showBackButton = false,
-                onMenuClick = onMenuClick,
-                onKeyClick = onKeyClick,
-                onProfileClick = onProfileClick
-            )
-        }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            HomeScreen(onNavigate = onNavigate)
-        }
-    }
+    HomeScreen(
+        onNavigate = onNavigate,
+        onMenuClick = onMenuClick,
+        onProfileClick = onProfileClick
+    )
 }

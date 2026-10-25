@@ -69,24 +69,29 @@ jobs:
       - name: Collect Output APKs
         run: |
           mkdir -p release-artifacts
-          find app/build/outputs/apk -name "*.apk" -exec cp {} release-artifacts/ \;
+          # Copy all generated APKs and ensure vaanga-padikkalaam.apk is present
+          APK_FILE=$(find app/build/outputs/apk -name "*.apk" | head -n 1)
+          if [ -n "$APK_FILE" ]; then
+            cp "$APK_FILE" release-artifacts/vaanga-padikkalaam.apk
+            echo "Successfully prepared release-artifacts/vaanga-padikkalaam.apk"
+          fi
           ls -la release-artifacts/
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: subiksha-teacher-apks
+          name: vaanga-padikkalaam-apk
           path: release-artifacts/*.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
         with:
-          name: "subiksha teacher - Release ${{ github.ref_name }}"
+          name: "vaanga padikkalaam (வாங்க படிக்கலாம்) - Release ${{ github.ref_name }}"
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('v1.0.{0}', github.run_number) }}
           draft: false
           prerelease: false
           generate_release_notes: true
-          files: release-artifacts/*.apk
+          files: release-artifacts/vaanga-padikkalaam.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

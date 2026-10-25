@@ -8,6 +8,10 @@ plugins {
   alias(libs.plugins.google.services)
 }
 
+base {
+  archivesName.set("vaanga-padikkalaam")
+}
+
 android {
   namespace = "com.example"
   compileSdk { version = release(36) { minorApiLevel = 1 } }

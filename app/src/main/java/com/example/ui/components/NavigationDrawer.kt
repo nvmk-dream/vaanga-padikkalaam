@@ -239,9 +239,9 @@ fun SubikshaDrawerContent(
                 color = SubikshaCardBorder
             )
 
-            // Section: AI & Learning Modules
+            // Section: AI & Learning Modules (Only Gemini Chat active until user requests more)
             Text(
-                text = "கற்றல் அம்சங்கள் / MODULES",
+                text = "செயற்கை நுண்ணறிவு / AI ASSISTANT",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = SubikshaTextMuted,
@@ -255,61 +255,6 @@ fun SubikshaDrawerContent(
                 selected = currentScreen == "gemini_chat",
                 onClick = {
                     onNavigate("gemini_chat")
-                    onCloseDrawer()
-                }
-            )
-
-            DrawerNavItem(
-                title = "Image to Text",
-                icon = Icons.Default.DocumentScanner,
-                accentColor = SubikshaMintGreen,
-                selected = currentScreen == "image_to_text",
-                onClick = {
-                    onNavigate("image_to_text")
-                    onCloseDrawer()
-                }
-            )
-
-            DrawerNavItem(
-                title = "Voice Chat",
-                icon = Icons.Default.Mic,
-                accentColor = SubikshaSkyBlue,
-                selected = currentScreen == "voice_chat",
-                onClick = {
-                    onNavigate("voice_chat")
-                    onCloseDrawer()
-                }
-            )
-
-            DrawerNavItem(
-                title = "Spoken English",
-                icon = Icons.Default.RecordVoiceOver,
-                accentColor = SubikshaWarmOrange,
-                selected = currentScreen == "spoken_english",
-                onClick = {
-                    onNavigate("spoken_english")
-                    onCloseDrawer()
-                }
-            )
-
-            DrawerNavItem(
-                title = "Mental Maths",
-                icon = Icons.Default.Calculate,
-                accentColor = SubikshaPink,
-                selected = currentScreen == "mental_maths",
-                onClick = {
-                    onNavigate("mental_maths")
-                    onCloseDrawer()
-                }
-            )
-
-            DrawerNavItem(
-                title = "More Features",
-                icon = Icons.Default.Widgets,
-                accentColor = SubikshaPastelPurple,
-                selected = currentScreen == "more_features",
-                onClick = {
-                    onNavigate("more_features")
                     onCloseDrawer()
                 }
             )

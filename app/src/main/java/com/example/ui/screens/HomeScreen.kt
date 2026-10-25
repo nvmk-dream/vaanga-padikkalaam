@@ -142,12 +142,11 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         // Pill 1: Last accessed: Spoken English Book
+                        // Pill 1: Last accessed (empty placeholder)
                         Surface(
                             shape = RoundedCornerShape(16.dp),
                             color = SubikshaSurfaceVariant,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .clickable { onNavigate("spoken_english") }
+                            modifier = Modifier.clip(RoundedCornerShape(16.dp))
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -169,7 +168,7 @@ fun HomeScreen(
                             }
                         }
 
-                        // Pill 2: New chat started
+                        // Pill 2: New chat started (Opens Gemini Chat)
                         Surface(
                             shape = RoundedCornerShape(16.dp),
                             color = SubikshaSurfaceVariant,
@@ -199,8 +198,9 @@ fun HomeScreen(
             }
         }
 
-        // 3. TWO-COLUMN GRID OF REALISTIC FEATURE CARDS (Matching Reference Image 1)
-        // Row 1: Gemini Chat & Image to Text
+        // 3. TWO-COLUMN GRID OF REALISTIC FEATURE CARDS
+        // Gemini Chat is fully functional; other 5 cards remain visual-only (empty of navigation)
+        // Row 1: Gemini Chat (Active) & Image to Text (Empty)
         item {
             Spacer(modifier = Modifier.height(6.dp))
             Row(
@@ -222,12 +222,12 @@ fun HomeScreen(
                     contentDescription = "Image to Text",
                     testTag = "card_image_to_text",
                     modifier = Modifier.weight(1f),
-                    onClick = { onNavigate("image_to_text") }
+                    onClick = { /* Empty: Feature to be added when requested */ }
                 )
             }
         }
 
-        // Row 2: Voice Chat & Spoken English
+        // Row 2: Voice Chat (Empty) & Spoken English (Empty)
         item {
             Spacer(modifier = Modifier.height(10.dp))
             Row(
@@ -241,7 +241,7 @@ fun HomeScreen(
                     contentDescription = "Voice Chat",
                     testTag = "card_voice_chat",
                     modifier = Modifier.weight(1f),
-                    onClick = { onNavigate("voice_chat") }
+                    onClick = { /* Empty: Feature to be added when requested */ }
                 )
 
                 ExactFeatureCard(
@@ -249,12 +249,12 @@ fun HomeScreen(
                     contentDescription = "Spoken English",
                     testTag = "card_spoken_english",
                     modifier = Modifier.weight(1f),
-                    onClick = { onNavigate("spoken_english") }
+                    onClick = { /* Empty: Feature to be added when requested */ }
                 )
             }
         }
 
-        // Row 3: Mental Maths & More Features
+        // Row 3: Mental Maths (Empty) & More Features (Empty)
         item {
             Spacer(modifier = Modifier.height(10.dp))
             Row(
@@ -268,7 +268,7 @@ fun HomeScreen(
                     contentDescription = "Mental Maths",
                     testTag = "card_mental_maths",
                     modifier = Modifier.weight(1f),
-                    onClick = { onNavigate("mental_maths") }
+                    onClick = { /* Empty: Feature to be added when requested */ }
                 )
 
                 ExactFeatureCard(
@@ -276,7 +276,7 @@ fun HomeScreen(
                     contentDescription = "More Features",
                     testTag = "card_more_features",
                     modifier = Modifier.weight(1f),
-                    onClick = { onNavigate("more_features") }
+                    onClick = { /* Empty: Feature to be added when requested */ }
                 )
             }
         }

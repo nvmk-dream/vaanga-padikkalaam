@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.VolumeUp
@@ -35,6 +36,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -67,35 +69,41 @@ fun GeminiChatScreen(
             .fillMaxSize()
             .background(SubikshaBackground)
     ) {
-        // 1. ULTRA DELUXE TOP HEADER (Matching Home Page aesthetic)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            SubikshaNavy,
-                            SubikshaRoyalPurple
-                        )
-                    )
-                )
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+        // 1. ULTRA DELUXE TOP HEADER (Matching Home Page & Mental Maths aesthetic)
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = Color.Transparent,
+            shadowElevation = 6.dp
         ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                // Top Action Row
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                SubikshaNavy,
+                                Color(0xFF1E1B4B),
+                                SubikshaRoyalPurple
+                            )
+                        ),
+                        shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
+                    )
+                    .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+                    .statusBarsPadding()
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    // Back Button (Elevated White Circle matching Home profile buttons)
+                    // Elevated Back Button
                     Surface(
                         shape = CircleShape,
                         color = Color.White,
                         shadowElevation = 4.dp,
                         modifier = Modifier
-                            .size(42.dp)
+                            .size(40.dp)
                             .testTag("gemini_back_button")
                     ) {
                         IconButton(onClick = onBackClick) {
@@ -108,19 +116,17 @@ fun GeminiChatScreen(
                         }
                     }
 
-                    // Center Teacher Avatar & Title Info
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(horizontal = 10.dp)
+                    // Teacher Avatar with Live Badge
+                    Box(
+                        modifier = Modifier.size(42.dp),
+                        contentAlignment = Alignment.Center
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(44.dp)
+                                .fillMaxSize()
                                 .clip(CircleShape)
                                 .background(Color.White)
-                                .border(2.dp, SubikshaPastelPurple, CircleShape),
+                                .border(2.dp, SubikshaMintGreen, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Image(
@@ -132,66 +138,68 @@ fun GeminiChatScreen(
                                 contentScale = ContentScale.Crop
                             )
                         }
+                        // Online glowing green indicator badge anchored at bottom-end
+                        Box(
+                            modifier = Modifier
+                                .size(11.dp)
+                                .align(Alignment.BottomEnd)
+                                .background(SubikshaMintGreen, CircleShape)
+                                .border(2.dp, Color.White, CircleShape)
+                        )
+                    }
 
-                        Spacer(modifier = Modifier.width(10.dp))
-
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "சுபிக்ஷா AI ஆசிரியர்",
-                                    color = Color.White,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                // Glowing Green Online Indicator Dot
-                                Box(
-                                    modifier = Modifier
-                                        .size(7.dp)
-                                        .clip(CircleShape)
-                                        .background(SubikshaMintGreen)
-                                )
-                            }
+                    // Title & Subtitle column (now gets full available width without breaking)
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "சுபிக்ஷா AI ஆசிரியர்",
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .background(SubikshaMintGreen, CircleShape)
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
                             Text(
-                                text = "Google Gemini 2.5 Flash • நேரலை அரட்டை",
-                                color = Color(0xFFE2E8F0),
+                                text = "Gemini 2.5 Flash • நேரலை",
+                                color = Color(0xFFC7D2FE),
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.Normal
+                                fontWeight = FontWeight.Normal,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
 
-                    // Right Actions: Listen/Full Tab Button & Refresh Button
+                    // Right Actions: Listen Button & Refresh Button
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // "🔊 Listen Tab" Button (Launches Ultra Deluxe Chrome Custom Tab with full TTS and Google Account)
+                        // "🔊 Listen Tab" Button
                         Surface(
-                            shape = RoundedCornerShape(18.dp),
+                            shape = CircleShape,
                             color = Color.White,
                             shadowElevation = 4.dp,
                             modifier = Modifier
-                                .height(38.dp)
-                                .clickable { launchGeminiCustomTab(context, geminiUrl) }
+                                .size(38.dp)
                                 .testTag("gemini_listen_tab_button")
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 10.dp)
-                            ) {
+                            IconButton(onClick = { launchGeminiCustomTab(context, geminiUrl) }) {
                                 Icon(
                                     imageVector = Icons.Default.VolumeUp,
-                                    contentDescription = "Listen Tab",
+                                    contentDescription = "Listen Voice Tab",
                                     tint = SubikshaRoyalPurple,
-                                    modifier = Modifier.size(17.dp)
-                                )
-                                Spacer(modifier = Modifier.width(5.dp))
-                                Text(
-                                    text = "Listen Tab",
-                                    color = SubikshaRoyalPurple,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
@@ -213,35 +221,49 @@ fun GeminiChatScreen(
                                     imageVector = Icons.Default.Refresh,
                                     contentDescription = "Refresh",
                                     tint = SubikshaNavy,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(19.dp)
                                 )
                             }
                         }
                     }
                 }
+            }
+        }
 
-                // Tip Pill below header explaining the Listen feature
-                Spacer(modifier = Modifier.height(8.dp))
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color.White.copy(alpha = 0.18f),
-                    modifier = Modifier.fillMaxWidth()
+        // Sleek Dismissible Tip Pill below header
+        var showTipBanner by remember { mutableStateOf(true) }
+        if (showTipBanner) {
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = SubikshaPastelPurple.copy(alpha = 0.25f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(start = 10.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    Text(text = "💡", fontSize = 12.sp)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "பதில்களின் கீழ் உள்ள '...' அழுத்தி Listen மூலம் பெண் குரலில் கேட்கலாம்",
+                        color = SubikshaNavy,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    IconButton(
+                        onClick = { showTipBanner = false },
+                        modifier = Modifier.size(22.dp)
                     ) {
-                        Text(
-                            text = "💡 உதவிக்குறிப்பு: ",
-                            color = SubikshaPastelPurple,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "பதில்களின் கீழே உள்ள '...' அழுத்தி Listen மூலம் பெண் குரலில் கேட்கலாம்!",
-                            color = Color.White,
-                            fontSize = 11.sp,
-                            maxLines = 1
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close Tip",
+                            tint = SubikshaNavy.copy(alpha = 0.6f),
+                            modifier = Modifier.size(14.dp)
                         )
                     }
                 }

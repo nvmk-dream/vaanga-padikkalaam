@@ -17,7 +17,8 @@ data class MathPdfItem(
     val localFilePath: String,
     val pageCount: Int,
     val isCustom: Boolean,
-    val colorHex: Long
+    val colorHex: Long,
+    val bookType: String = "MATHS" // "MATHS" or "PARAGRAPH"
 )
 
 class MentalMathsPdfManager(private val context: Context) {
@@ -33,28 +34,32 @@ class MentalMathsPdfManager(private val context: Context) {
             title = "கூட்டல் மனக்கணக்கு (500)",
             subtitle = "தொடக்கநிலை எளிய கூட்டல் பயிற்சிகள்",
             assetName = "pdf/addition_500.pdf",
-            colorHex = 0xFF7C3AED
+            colorHex = 0xFF7C3AED,
+            bookType = "MATHS"
         ),
         DefaultPdfMeta(
             id = "default_subtraction",
             title = "கழித்தல் மனக்கணக்கு (500)",
             subtitle = "தொடக்கநிலை எளிய கழித்தல் பயிற்சிகள்",
             assetName = "pdf/subtraction_500.pdf",
-            colorHex = 0xFF2196F3
+            colorHex = 0xFF2196F3,
+            bookType = "MATHS"
         ),
         DefaultPdfMeta(
             id = "default_multiplication",
             title = "பெருக்கல் மனக்கணக்கு (500)",
             subtitle = "தொடக்கநிலை எளிய பெருக்கல் பயிற்சிகள்",
             assetName = "pdf/multiplication_500.pdf",
-            colorHex = 0xFF20C997
+            colorHex = 0xFF20C997,
+            bookType = "MATHS"
         ),
         DefaultPdfMeta(
             id = "default_division",
             title = "வகுத்தல் மனக்கணக்கு (500)",
             subtitle = "தொடக்கநிலை எளிய வகுத்தல் பயிற்சிகள்",
             assetName = "pdf/division_500.pdf",
-            colorHex = 0xFFFFA726
+            colorHex = 0xFFFFA726,
+            bookType = "MATHS"
         )
     )
 
@@ -63,7 +68,8 @@ class MentalMathsPdfManager(private val context: Context) {
         val title: String,
         val subtitle: String,
         val assetName: String,
-        val colorHex: Long
+        val colorHex: Long,
+        val bookType: String
     )
 
     fun getDeletedIds(): Set<String> {
@@ -91,7 +97,8 @@ class MentalMathsPdfManager(private val context: Context) {
                             localFilePath = targetFile.absolutePath,
                             pageCount = pages,
                             isCustom = false,
-                            colorHex = meta.colorHex
+                            colorHex = meta.colorHex,
+                            bookType = meta.bookType
                         )
                     )
                 }
@@ -109,15 +116,18 @@ class MentalMathsPdfManager(private val context: Context) {
                     val path = obj.getString("path")
                     val file = File(path)
                     if (file.exists() && file.length() > 0) {
+                        val bookType = obj.optString("bookType", "MATHS")
+                        val defaultSub = if (bookType == "PARAGRAPH") "பத்தி வடிவ வாசிப்புப் புத்தகம்" else "மனக்கணக்கு பயிற்சி புத்தகம்"
                         list.add(
                             MathPdfItem(
                                 id = id,
                                 title = obj.getString("title"),
-                                subtitle = obj.optString("subtitle", "பயனர் சேர்த்த புத்தகம்"),
+                                subtitle = obj.optString("subtitle", defaultSub),
                                 localFilePath = file.absolutePath,
                                 pageCount = obj.optInt("pageCount", getPdfPageCount(file)),
                                 isCustom = true,
-                                colorHex = obj.optLong("colorHex", 0xFFEC4899)
+                                colorHex = obj.optLong("colorHex", if (bookType == "PARAGRAPH") 0xFF3B82F6 else 0xFFEC4899),
+                                bookType = bookType
                             )
                         )
                     }
@@ -128,7 +138,7 @@ class MentalMathsPdfManager(private val context: Context) {
         return list
     }
 
-    fun addCustomPdf(uri: Uri, customTitle: String? = null): MathPdfItem? {
+    fun addCustomPdf(uri: Uri, customTitle: String? = null, bookType: String = "MATHS"): MathPdfItem? {
         return try {
             val id = "custom_${System.currentTimeMillis()}"
             val fileName = getFileNameFromUri(uri) ?: "$id.pdf"
@@ -145,7 +155,17 @@ class MentalMathsPdfManager(private val context: Context) {
             if (!targetFile.exists() || targetFile.length() == 0L) return null
 
             val pageCount = getPdfPageCount(targetFile)
-            val colorHex = listOf(0xFFEC4899, 0xFF8B5CF6, 0xFF10B981, 0xFFF59E0B).random()
+            val colorHex = if (bookType == "PARAGRAPH") {
+                listOf(0xFF3B82F6, 0xFF6366F1, 0xFF0D9488, 0xFF8B5CF6).random()
+            } else {
+                listOf(0xFFEC4899, 0xFF8B5CF6, 0xFF10B981, 0xFFF59E0B).random()
+            }
+
+            val subtitle = if (bookType == "PARAGRAPH") {
+                "$pageCount பக்கங்கள் • பத்தி வடிவ புத்தகம்"
+            } else {
+                "$pageCount பக்கங்கள் • மனக்கணக்கு பயிற்சி"
+            }
 
             // Save to SharedPreferences
             val customJson = prefs.getString("custom_math_pdfs", "[]") ?: "[]"
@@ -153,10 +173,11 @@ class MentalMathsPdfManager(private val context: Context) {
             val newObj = JSONObject().apply {
                 put("id", id)
                 put("title", displayTitle)
-                put("subtitle", "$pageCount பக்கங்கள் • மனக்கணக்கு பயிற்சி")
+                put("subtitle", subtitle)
                 put("path", targetFile.absolutePath)
                 put("pageCount", pageCount)
                 put("colorHex", colorHex)
+                put("bookType", bookType)
             }
             jsonArray.put(newObj)
             prefs.edit().putString("custom_math_pdfs", jsonArray.toString()).apply()
@@ -164,11 +185,12 @@ class MentalMathsPdfManager(private val context: Context) {
             MathPdfItem(
                 id = id,
                 title = displayTitle,
-                subtitle = "$pageCount பக்கங்கள் • மனக்கணக்கு பயிற்சி",
+                subtitle = subtitle,
                 localFilePath = targetFile.absolutePath,
                 pageCount = pageCount,
                 isCustom = true,
-                colorHex = colorHex
+                colorHex = colorHex,
+                bookType = bookType
             )
         } catch (e: Exception) {
             e.printStackTrace()
@@ -178,18 +200,15 @@ class MentalMathsPdfManager(private val context: Context) {
 
     fun deletePdf(id: String): Boolean {
         return try {
-            // 1. Mark in deleted_ids set (so it NEVER returns)
             val deleted = getDeletedIds().toMutableSet()
             deleted.add(id)
             prefs.edit().putStringSet("deleted_pdf_ids", deleted).apply()
 
-            // 2. Delete the physical file from internal storage
             val file = File(pdfDir, "$id.pdf")
             if (file.exists()) {
                 file.delete()
             }
 
-            // 3. Clean up custom list if applicable
             val customJson = prefs.getString("custom_math_pdfs", "[]") ?: "[]"
             val jsonArray = JSONArray(customJson)
             val newArray = JSONArray()
@@ -234,7 +253,7 @@ class MentalMathsPdfManager(private val context: Context) {
         }
     }
 
-    private fun getFileNameFromUri(uri: Uri): String? {
+    fun getFileNameFromUri(uri: Uri): String? {
         var name: String? = null
         val cursor = context.contentResolver.query(uri, null, null, null, null)
         cursor?.use {

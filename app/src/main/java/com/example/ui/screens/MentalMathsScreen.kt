@@ -68,6 +68,9 @@ fun MentalMathsScreen(
     var showSettingsDialog by remember { mutableStateOf(false) }
     var deleteCandidate by remember { mutableStateOf<MathPdfItem?>(null) }
 
+    // Upload Type Selection Dialog state (A. Maths vs B. Paragraph)
+    var pendingUploadUri by remember { mutableStateOf<Uri?>(null) }
+
     // Text to Speech with Female Voice
     val speaker = remember { TamilMathSpeaker(context) }
     var isSpeaking by remember { mutableStateOf(false) }
@@ -83,10 +86,7 @@ fun MentalMathsScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         if (uri != null) {
-            val addedItem = pdfManager.addCustomPdf(uri)
-            if (addedItem != null) {
-                pdfList = pdfManager.getAllPdfs()
-            }
+            pendingUploadUri = uri
         }
     }
 
@@ -154,7 +154,160 @@ fun MentalMathsScreen(
         )
     }
 
-    // Settings / PDF Management Dialog (Only one settings access point)
+    // Upload Type Selection Dialog: (A) மனக்கணக்குப் புத்தகம் vs (B) பத்தி வடிவ புத்தகம்
+    if (pendingUploadUri != null) {
+        val uri = pendingUploadUri!!
+        val defaultName = remember(uri) {
+            pdfManager.getFileNameFromUri(uri)?.removeSuffix(".pdf")?.replace("_", " ") ?: "புதிய புத்தகம்"
+        }
+        var customTitle by remember { mutableStateOf(defaultName) }
+        var selectedType by remember { mutableStateOf("MATHS") } // "MATHS" or "PARAGRAPH"
+
+        AlertDialog(
+            onDismissRequest = { pendingUploadUri = null },
+            title = {
+                Text(
+                    text = "புத்தக வகையைத் தேர்ந்தெடுக்கவும்",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = SubikshaNavy
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Text(
+                        text = "புத்தகத்தின் தலைப்பு:",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = SubikshaNavy
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    OutlinedTextField(
+                        value = customTitle,
+                        onValueChange = { customTitle = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "வாசிக்கும் பாணி (Reading Mode):",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = SubikshaNavy
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Option A: மனக்கணக்குப் புத்தகம்
+                    Card(
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (selectedType == "MATHS") SubikshaRoyalPurple.copy(alpha = 0.12f) else SubikshaSurfaceVariant
+                        ),
+                        border = if (selectedType == "MATHS") CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(SubikshaRoyalPurple)) else null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedType = "MATHS" }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedType == "MATHS",
+                                onClick = { selectedType = "MATHS" },
+                                colors = RadioButtonDefaults.colors(selectedColor = SubikshaRoyalPurple)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = "A. மனக்கணக்குப் புத்தகம்",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = SubikshaNavy
+                                )
+                                Text(
+                                    text = "கணக்குகள் மற்றும் எளிய வழிமுறைகள் (2-வது, 3-வது கணக்குகளை தட்டினால் பேசும்)",
+                                    fontSize = 11.sp,
+                                    color = SubikshaTextMuted
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Option B: பத்தி வடிவ புத்தகம்
+                    Card(
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (selectedType == "PARAGRAPH") SubikshaSkyBlue.copy(alpha = 0.12f) else SubikshaSurfaceVariant
+                        ),
+                        border = if (selectedType == "PARAGRAPH") CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(SubikshaSkyBlue)) else null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedType = "PARAGRAPH" }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedType == "PARAGRAPH",
+                                onClick = { selectedType = "PARAGRAPH" },
+                                colors = RadioButtonDefaults.colors(selectedColor = SubikshaSkyBlue)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = "B. பத்தி வடிவ புத்தகம் (Paragraph)",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = SubikshaNavy
+                                )
+                                Text(
+                                    text = "கதை, கட்டுரை, பாடப் பத்திகள் (பத்திகளைத் தொட்டு வாசிக்கும் முறை)",
+                                    fontSize = 11.sp,
+                                    color = SubikshaTextMuted
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val added = pdfManager.addCustomPdf(uri, customTitle, selectedType)
+                        if (added != null) {
+                            pdfList = pdfManager.getAllPdfs()
+                        }
+                        pendingUploadUri = null
+                        showSettingsDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SubikshaRoyalPurple)
+                ) {
+                    Text("சேர்க்க (Add Book)")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { pendingUploadUri = null }) {
+                    Text("ரத்து செய்")
+                }
+            }
+        )
+    }
+
+    // Settings / PDF Management Dialog (Single settings access point)
     if (showSettingsDialog) {
         MentalMathsSettingsDialog(
             pdfList = pdfList,
@@ -212,7 +365,7 @@ fun MentalMathsScreen(
                         }
                     },
                     actions = {
-                        // Single Settings Gear Button on top-right (Requirement 1)
+                        // Single Settings Gear Button on top-right
                         IconButton(
                             onClick = { showSettingsDialog = true },
                             modifier = Modifier.testTag("maths_settings_button")
@@ -236,7 +389,7 @@ fun MentalMathsScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Banner Card explaining Tap-to-Speak feature
+                // Banner Card
                 item {
                     Card(
                         shape = RoundedCornerShape(20.dp),
@@ -268,7 +421,7 @@ fun MentalMathsScreen(
                                     color = SubikshaNavy
                                 )
                                 Text(
-                                    text = "PDF-ல் 2-வது கணக்கைத் தொட்டால் 2-வது கணக்கை பெண் குரல் பேசும்! 3-வது கணக்கைத் தொட்டால் 3-வது கணக்கை பேசும்!",
+                                    text = "PDF-ல் 2-வது கணக்கைத் தொட்டால் 2-வது கணக்கை பெண் குரல் பேசும்! பத்தி புத்தகங்களில் பத்திகளை வாசிக்கும்!",
                                     fontSize = 12.sp,
                                     color = SubikshaTextMuted
                                 )
@@ -277,7 +430,7 @@ fun MentalMathsScreen(
                     }
                 }
 
-                // Section Title (Clean - duplicate settings button removed as requested in Requirement 1)
+                // Section Title (Clean - single settings gear button)
                 item {
                     Text(
                         text = "பாடப் புத்தகங்கள் (${pdfList.size})",
@@ -375,6 +528,7 @@ fun MathBookCard(
                 contentAlignment = Alignment.Center
             ) {
                 val iconSymbol = when {
+                    pdfItem.bookType == "PARAGRAPH" -> "📖"
                     pdfItem.title.contains("கூட்டல்") -> "➕"
                     pdfItem.title.contains("கழித்தல்") -> "➖"
                     pdfItem.title.contains("பெருக்கல்") -> "✖️"
@@ -411,6 +565,20 @@ fun MathBookCard(
                             fontWeight = FontWeight.Medium,
                             color = SubikshaNavy,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (pdfItem.bookType == "PARAGRAPH") SubikshaSkyBlue.copy(alpha = 0.2f) else SubikshaRoyalPurple.copy(alpha = 0.15f)
+                    ) {
+                        Text(
+                            text = if (pdfItem.bookType == "PARAGRAPH") "பத்தி புத்தகம்" else "மனக்கணக்கு",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (pdfItem.bookType == "PARAGRAPH") SubikshaSkyBlue else SubikshaRoyalPurple,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
                         )
                     }
 
@@ -451,7 +619,7 @@ fun MathBookCard(
 }
 
 /**
- * Settings Dialog: Allows adding new PDFs and permanently deleting existing ones
+ * Settings Dialog: Allows adding new PDFs with Type A/B selection and permanently deleting existing ones
  */
 @Composable
 fun MentalMathsSettingsDialog(
@@ -483,7 +651,7 @@ fun MentalMathsSettingsDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 420.dp)
+                    .heightIn(max = 440.dp)
                     .verticalScroll(rememberScrollState())
             ) {
                 Text(
@@ -493,7 +661,7 @@ fun MentalMathsSettingsDialog(
                     color = SubikshaRoyalPurple
                 )
                 Text(
-                    text = "புதிய PDF கோப்புகளை சேர்க்கலாம். ஒருமுறை Delete செய்தால் அது நிரந்தரமாக நீக்கப்பட்டு மீண்டும் வராது.",
+                    text = "புதிய PDF சேர்க்கும்போது (A) மனக்கணக்கு அல்லது (B) பத்தி வடிவம் எனத் தேர்ந்தெடுக்கலாம்.",
                     fontSize = 12.sp,
                     color = Color.Gray,
                     modifier = Modifier.padding(top = 2.dp, bottom = 12.dp)
@@ -551,11 +719,20 @@ fun MentalMathsSettingsDialog(
                                         fontWeight = FontWeight.Bold,
                                         color = SubikshaNavy
                                     )
-                                    Text(
-                                        text = "${pdf.pageCount} பக்கங்கள்",
-                                        fontSize = 11.sp,
-                                        color = Color.Gray
-                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = "${pdf.pageCount} பக்கங்கள்",
+                                            fontSize = 11.sp,
+                                            color = Color.Gray
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = if (pdf.bookType == "PARAGRAPH") "• பத்தி புத்தகம்" else "• மனக்கணக்கு",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = if (pdf.bookType == "PARAGRAPH") SubikshaSkyBlue else SubikshaRoyalPurple
+                                        )
+                                    }
                                 }
 
                                 IconButton(
@@ -583,11 +760,11 @@ fun MentalMathsSettingsDialog(
 }
 
 /**
- * Mobile-Fit PDF Viewer Screen with:
+ * Mobile-Fit PDF Viewer Screen supporting:
  * 1. Mobile screen width fitting
  * 2. Smooth Pinch-to-Zoom (1x to 4x) & Pan
- * 3. Interactive Tap-to-Speak on the 20 individual tricks with Female Voice TTS
- * 4. Highlighting of selected trick
+ * 3. Type A: 20-trick tap-to-speak math mode
+ * 4. Type B: Paragraph tap-to-speak reading mode
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -606,10 +783,12 @@ fun PdfViewerScreen(
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
 
-    // Interactive Tap-to-Speak State
+    // Active Spoken State
     var activeSpokenItemIndex by remember { mutableStateOf<Int?>(null) }
     var activeSpokenText by remember { mutableStateOf("") }
     var imageContainerSize by remember { mutableStateOf(IntSize.Zero) }
+
+    val isParagraphMode = pdfItem.bookType == "PARAGRAPH"
 
     // Reset zoom and highlights when changing page
     LaunchedEffect(currentPage) {
@@ -619,10 +798,25 @@ fun PdfViewerScreen(
         activeSpokenText = ""
     }
 
-    // Function to speak a specific trick by index (0 to 19)
-    fun speakTrick(itemIndex: Int) {
+    // Function to speak a specific math trick (Type A)
+    fun speakMathTrick(itemIndex: Int) {
         activeSpokenItemIndex = itemIndex
         val speech = MentalMathsTricksData.getSpeechForTrick(pdfItem.title, currentPage, itemIndex)
+        activeSpokenText = speech
+        speaker.speak(speech)
+    }
+
+    // Function to speak a paragraph section (Type B)
+    fun speakParagraph(paraIndex: Int) {
+        activeSpokenItemIndex = paraIndex
+        val ordinal = when (paraIndex) {
+            0 -> "முதல் பத்தி"
+            1 -> "இரண்டாம் பத்தி"
+            2 -> "மூன்றாம் பத்தி"
+            3 -> "நான்காம் பத்தி"
+            else -> "${paraIndex + 1}-வது பத்தி"
+        }
+        val speech = "பக்கம் ${currentPage + 1}, $ordinal. இந்தப் பத்தியின் வரிகளைக் கவனித்துப் படிக்கவும்."
         activeSpokenText = speech
         speaker.speak(speech)
     }
@@ -642,7 +836,6 @@ fun PdfViewerScreen(
                 val pageIndex = currentPage.coerceIn(0, totalPages - 1)
 
                 page = renderer.openPage(pageIndex)
-                // Render at high density for crystal-clear readability on mobile
                 val bmp = Bitmap.createBitmap(
                     page.width * 2,
                     page.height * 2,
@@ -706,7 +899,7 @@ fun PdfViewerScreen(
                     }
                 },
                 actions = {
-                    // Reset Zoom Button (visible when zoomed in)
+                    // Reset Zoom Button
                     if (scale > 1.05f) {
                         IconButton(
                             onClick = {
@@ -722,15 +915,18 @@ fun PdfViewerScreen(
                         }
                     }
 
-                    // Speaker Button (Reads current selected trick or entire page prompt)
+                    // Speaker Button (Reads active or page)
                     IconButton(
                         onClick = {
                             if (speaker.isSpeaking()) {
                                 speaker.stop()
                                 activeSpokenItemIndex = null
                             } else {
-                                val targetIndex = activeSpokenItemIndex ?: 0
-                                speakTrick(targetIndex)
+                                if (isParagraphMode) {
+                                    speakParagraph(activeSpokenItemIndex ?: 0)
+                                } else {
+                                    speakMathTrick(activeSpokenItemIndex ?: 0)
+                                }
                             }
                         },
                         modifier = Modifier.testTag("pdf_speaker_button")
@@ -752,10 +948,15 @@ fun PdfViewerScreen(
                     .fillMaxWidth()
                     .background(Color.White)
             ) {
-                // Interactive 20-Trick Quick Selector Strip (1 to 20)
-                // Allows user to directly tap Trick 2, Trick 3, etc. with instant voice speech
+                // Quick Selector: Math Tricks (1 to 20) OR Paragraphs (1 to 5)
+                val labelText = if (isParagraphMode) {
+                    "🔊 பத்தியைத் தட்டிப் பெண் குரலில் கேட்கவும்:"
+                } else {
+                    "🔊 கணக்கைத் தட்டிப் பெண் குரலில் கேட்கவும் (1-20):"
+                }
+
                 Text(
-                    text = "🔊 கணக்கைத் தட்டிப் பெண் குரலில் கேட்கவும் (1-20):",
+                    text = labelText,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = SubikshaNavy,
@@ -768,31 +969,57 @@ fun PdfViewerScreen(
                         .padding(horizontal = 12.dp, vertical = 2.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    items(20) { index ->
-                        val isSelected = activeSpokenItemIndex == index
-                        val qNum = currentPage * 20 + index + 1
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { speakTrick(index) },
-                            label = {
-                                Text(
-                                    text = "$qNum",
-                                    fontSize = 12.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                    if (isParagraphMode) {
+                        // 5 paragraph sections per page
+                        items(5) { pIdx ->
+                            val isSelected = activeSpokenItemIndex == pIdx
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { speakParagraph(pIdx) },
+                                label = {
+                                    Text(
+                                        text = "பத்தி ${pIdx + 1}",
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                },
+                                leadingIcon = if (isSelected && speaker.isSpeaking()) {
+                                    { Text("🔊", fontSize = 10.sp) }
+                                } else null,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = SubikshaSkyBlue,
+                                    selectedLabelColor = Color.White
                                 )
-                            },
-                            leadingIcon = if (isSelected && speaker.isSpeaking()) {
-                                { Text("🔊", fontSize = 10.sp) }
-                            } else null,
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = SubikshaRoyalPurple,
-                                selectedLabelColor = Color.White
                             )
-                        )
+                        }
+                    } else {
+                        // 20 sums per page
+                        items(20) { index ->
+                            val isSelected = activeSpokenItemIndex == index
+                            val qNum = currentPage * 20 + index + 1
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { speakMathTrick(index) },
+                                label = {
+                                    Text(
+                                        text = "$qNum",
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                },
+                                leadingIcon = if (isSelected && speaker.isSpeaking()) {
+                                    { Text("🔊", fontSize = 10.sp) }
+                                } else null,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = SubikshaRoyalPurple,
+                                    selectedLabelColor = Color.White
+                                )
+                            )
+                        }
                     }
                 }
 
-                // Active Spoken Trick Announcement Banner
+                // Active Spoken Announcement Banner
                 AnimatedVisibility(
                     visible = activeSpokenItemIndex != null && activeSpokenText.isNotBlank(),
                     enter = fadeIn(),
@@ -871,7 +1098,6 @@ fun PdfViewerScreen(
                         Text("முந்தைய")
                     }
 
-                    // Direct Page Indicator
                     Text(
                         text = "பக்கம் ${currentPage + 1} / $totalPages",
                         fontSize = 13.sp,
@@ -929,7 +1155,6 @@ fun PdfViewerScreen(
             if (isLoadingPage) {
                 CircularProgressIndicator(color = SubikshaRoyalPurple)
             } else if (pageBitmap != null) {
-                // The Rendered PDF Image with Transform & Direct Tap Gestures
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -940,30 +1165,34 @@ fun PdfViewerScreen(
                             translationX = offset.x
                             translationY = offset.y
                         }
-                        // Direct Tap Detection on the PDF page:
-                        // Maps vertical touch position to one of the 20 questions
-                        .pointerInput(currentPage) {
+                        .pointerInput(currentPage, isParagraphMode) {
                             detectTapGestures { tapOffset ->
                                 val height = size.height
                                 if (height > 0) {
                                     val normY = tapOffset.y / height
-                                    // The 20 questions span from ~16% to ~94% of page height
-                                    val topBound = 0.16f
-                                    val bottomBound = 0.94f
-                                    if (normY in topBound..bottomBound) {
-                                        val fraction = (normY - topBound) / (bottomBound - topBound)
-                                        val clickedIndex = (fraction * 20).toInt().coerceIn(0, 19)
-                                        speakTrick(clickedIndex)
-                                    } else if (normY < topBound) {
-                                        speakTrick(0)
+                                    if (isParagraphMode) {
+                                        // 5 paragraph sections
+                                        val pIndex = (normY * 5).toInt().coerceIn(0, 4)
+                                        speakParagraph(pIndex)
                                     } else {
-                                        speakTrick(19)
+                                        // 20 math trick sections
+                                        val topBound = 0.16f
+                                        val bottomBound = 0.94f
+                                        if (normY in topBound..bottomBound) {
+                                            val fraction = (normY - topBound) / (bottomBound - topBound)
+                                            val clickedIndex = (fraction * 20).toInt().coerceIn(0, 19)
+                                            speakMathTrick(clickedIndex)
+                                        } else if (normY < topBound) {
+                                            speakMathTrick(0)
+                                        } else {
+                                            speakMathTrick(19)
+                                        }
                                     }
                                 }
                             }
                         }
                 ) {
-                    // PDF Page rendered to fit mobile screen width
+                    // Mobile-Fit PDF Page
                     Image(
                         bitmap = pageBitmap!!.asImageBitmap(),
                         contentDescription = "PDF Page ${currentPage + 1}",
@@ -975,41 +1204,79 @@ fun PdfViewerScreen(
                         contentScale = ContentScale.FillWidth
                     )
 
-                    // Visual Highlight Overlay over the currently tapped trick
+                    // Visual Highlight Overlay
                     if (activeSpokenItemIndex != null) {
                         val index = activeSpokenItemIndex!!
-                        // 20 items distributed vertically between 16% and 94%
-                        val topPercent = 0.16f + (index * ((0.94f - 0.16f) / 20f))
-                        val itemHeightPercent = (0.94f - 0.16f) / 20f
+                        val highlightColor = if (isParagraphMode) SubikshaSkyBlue else SubikshaRoyalPurple
 
-                        BoxWithConstraints(modifier = Modifier.matchParentSize()) {
-                            val boxHeight = maxHeight * itemHeightPercent
-                            val boxTop = maxHeight * topPercent
+                        if (isParagraphMode) {
+                            // 5 paragraph boxes
+                            val pTopPercent = index * 0.2f
+                            val pHeightPercent = 0.19f
 
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(boxHeight)
-                                    .padding(top = boxTop, start = 8.dp, end = 8.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(SubikshaRoyalPurple.copy(alpha = 0.22f))
-                                    .border(2.dp, SubikshaRoyalPurple, RoundedCornerShape(6.dp))
-                            ) {
-                                // Small speaker badge in corner of active item
+                            BoxWithConstraints(modifier = Modifier.matchParentSize()) {
+                                val boxHeight = maxHeight * pHeightPercent
+                                val boxTop = maxHeight * pTopPercent
+
                                 Box(
                                     modifier = Modifier
-                                        .align(Alignment.TopEnd)
-                                        .padding(4.dp)
-                                        .clip(CircleShape)
-                                        .background(SubikshaRoyalPurple)
-                                        .padding(4.dp)
+                                        .fillMaxWidth()
+                                        .height(boxHeight)
+                                        .padding(top = boxTop, start = 8.dp, end = 8.dp)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(highlightColor.copy(alpha = 0.18f))
+                                        .border(2.dp, highlightColor, RoundedCornerShape(6.dp))
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.VolumeUp,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(12.dp)
-                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(4.dp)
+                                            .clip(CircleShape)
+                                            .background(highlightColor)
+                                            .padding(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.VolumeUp,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            // 20 math trick boxes
+                            val topPercent = 0.16f + (index * ((0.94f - 0.16f) / 20f))
+                            val itemHeightPercent = (0.94f - 0.16f) / 20f
+
+                            BoxWithConstraints(modifier = Modifier.matchParentSize()) {
+                                val boxHeight = maxHeight * itemHeightPercent
+                                val boxTop = maxHeight * topPercent
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(boxHeight)
+                                        .padding(top = boxTop, start = 8.dp, end = 8.dp)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(highlightColor.copy(alpha = 0.22f))
+                                        .border(2.dp, highlightColor, RoundedCornerShape(6.dp))
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(4.dp)
+                                            .clip(CircleShape)
+                                            .background(highlightColor)
+                                            .padding(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.VolumeUp,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                    }
                                 }
                             }
                         }

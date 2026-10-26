@@ -70,12 +70,12 @@ fun HomeScreen(
         ),
         HomeFeatureItem(
             id = "spoken_english",
-            title = "ஆங்கிலம் பேசுவோம்",
-            englishSubtitle = "Spoken English Daily Practice",
-            description = "தினசரி உரையாடல் வாக்கியங்களை தமிழில் எளிதாகப் புரிந்து சரளமாகப் பேசும் பயிற்சி.",
+            title = "ஆங்கிலம் பேசுவோம் (Books 1 & 2)",
+            englishSubtitle = "Learn English Through Tamil",
+            description = "புக் 1 அன்றாடப் பேச்சு மற்றும் 100 வாக்கியங்கள்; புக் 2 காலங்கள் (12 Tenses) & நேரடி ஒப்பீட்டுப் பயிற்சி.",
             icon = Icons.Default.RecordVoiceOver,
             drawableRes = R.drawable.card_spoken_english,
-            badge = "SPOKEN",
+            badge = "BOOK 1 & 2",
             accentColor = SubikshaWarmOrange
         ),
         HomeFeatureItem(

@@ -63,6 +63,7 @@ fun SubikshaApp() {
 
     ModalNavigationDrawer(
         drawerState = drawerState,
+        gesturesEnabled = currentScreen == "home",
         drawerContent = {
             SubikshaDrawerContent(
                 currentScreen = currentScreen,

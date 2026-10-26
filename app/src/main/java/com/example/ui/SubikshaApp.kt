@@ -130,11 +130,7 @@ fun SubikshaApp() {
                 }
                 "mental_maths" -> {
                     MentalMathsScreen(
-                        onBackClick = { navigateBack() },
-                        onMenuClick = { coroutineScope.launch { drawerState.open() } },
-                        onAskGemini = { _ ->
-                            navigateTo("gemini_chat")
-                        }
+                        onBackClick = { navigateBack() }
                     )
                 }
                 "more_features", "explore" -> {

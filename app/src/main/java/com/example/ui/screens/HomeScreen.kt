@@ -268,7 +268,7 @@ fun HomeScreen(
                     contentDescription = "Mental Maths",
                     testTag = "card_mental_maths",
                     modifier = Modifier.weight(1f),
-                    onClick = { /* Empty: Feature to be added when requested */ }
+                    onClick = { onNavigate("mental_maths") }
                 )
 
                 ExactFeatureCard(

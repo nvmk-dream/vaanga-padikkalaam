@@ -259,6 +259,17 @@ fun SubikshaDrawerContent(
                 }
             )
 
+            DrawerNavItem(
+                title = "Mental Maths / மனக்கணக்கு",
+                icon = Icons.Default.Calculate,
+                accentColor = SubikshaPink,
+                selected = currentScreen == "mental_maths",
+                onClick = {
+                    onNavigate("mental_maths")
+                    onCloseDrawer()
+                }
+            )
+
             Spacer(modifier = Modifier.height(20.dp))
         }
     }

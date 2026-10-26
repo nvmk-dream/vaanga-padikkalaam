@@ -53,7 +53,30 @@ fun SpokenEnglishScreen(
     DisposableEffect(Unit) {
         val tts = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                ttsEngine?.language = Locale.US
+                // Try Indian English first for sweet native accent, fallback to US
+                val inLocale = Locale("en", "IN")
+                val langResult = ttsEngine?.setLanguage(inLocale)
+                if (langResult == TextToSpeech.LANG_MISSING_DATA || langResult == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    ttsEngine?.language = Locale.US
+                }
+
+                // Search and set Female voice suitable for teaching
+                try {
+                    val femaleVoice = ttsEngine?.voices?.find { voice ->
+                        val nameLower = voice.name.lowercase(Locale.ROOT)
+                        val isEn = voice.locale.language == "en"
+                        isEn && (nameLower.contains("female") || 
+                                 nameLower.contains("fem") || 
+                                 nameLower.contains("en-in") || 
+                                 nameLower.contains("en_in"))
+                    }
+                    if (femaleVoice != null) {
+                        ttsEngine?.voice = femaleVoice
+                    }
+                } catch (_: Exception) {}
+
+                // Sweet, clear female teacher pitch and pleasant cadence
+                ttsEngine?.setPitch(1.18f)
                 isTtsReady = true
             }
         }
@@ -65,12 +88,49 @@ fun SpokenEnglishScreen(
         }
     }
 
-    fun speakText(text: String, id: Int? = null) {
+    fun speakText(rawText: String, id: Int? = null) {
         if (!isTtsReady || ttsEngine == null) return
         ttsEngine?.stop()
-        ttsEngine?.setSpeechRate(if (slowSpeed) 0.72f else 0.95f)
+
+        // 1. Clean out all occurrences of V1, V2, V3 from voice listening
+        val cleanedText = rawText
+            .replace(Regex("(?i)\\(\\s*v[1-3]\\s*\\)"), "")
+            .replace(Regex("(?i)\\bv[1-3]\\b"), "")
+            .replace("(", "")
+            .replace(")", "")
+            .trim()
+
+        // 2. Check if this is a Verb Drill (e.g. "Eat - Ate - Eaten" or words separated by '-')
+        val isVerbDrill = cleanedText.contains("-")
+        if (isVerbDrill) {
+            val words = cleanedText.split("-", ",")
+                .map { it.trim() }
+                .filter { it.isNotEmpty() && !it.equals("v1", true) && !it.equals("v2", true) && !it.equals("v3", true) }
+
+            if (words.size > 1) {
+                ttsEngine?.setPitch(1.18f)
+                ttsEngine?.setSpeechRate(if (slowSpeed) 0.65f else 0.82f)
+                currentlySpeakingSentenceId = id
+
+                // Speak word 1 -> 1-sec silence pause -> word 2 -> 1-sec silence pause -> word 3
+                words.forEachIndexed { index, word ->
+                    if (index == 0) {
+                        ttsEngine?.speak(word, TextToSpeech.QUEUE_FLUSH, null, "${id}_verb_$index")
+                    } else {
+                        // Exactly 1 second (1000ms) silence pause between verb forms
+                        ttsEngine?.playSilentUtterance(1000L, TextToSpeech.QUEUE_ADD, "${id}_pause_$index")
+                        ttsEngine?.speak(word, TextToSpeech.QUEUE_ADD, null, "${id}_verb_$index")
+                    }
+                }
+                return
+            }
+        }
+
+        // 3. Standard sentence speech with female cadence
+        ttsEngine?.setPitch(1.18f)
+        ttsEngine?.setSpeechRate(if (slowSpeed) 0.72f else 0.88f)
         currentlySpeakingSentenceId = id
-        ttsEngine?.speak(text, TextToSpeech.QUEUE_FLUSH, null, id?.toString() ?: "id")
+        ttsEngine?.speak(cleanedText, TextToSpeech.QUEUE_FLUSH, null, id?.toString() ?: "sentence_id")
     }
 
     fun stopSpeaking() {

@@ -1070,16 +1070,26 @@ object SpokenEnglishRepository {
                     description = "ஒவ்வொரு சொல்லுக்கும் V1, V2, V3 வடிவங்கள் மற்றும் 3 காலங்களிலும் வாக்கியப் பயிற்சி.",
                     badge = "60 வாக்கியங்கள்",
                     sentences = listOf(
-                        SpokenSentence(1, "Eat - Ate - Eaten", "சாப்பிடு (V1 - V2 - V3)", "+2+1 Drill", "Verb 1"),
-                        SpokenSentence(2, "Drink - Drank - Drunk", "குடி (V1 - V2 - V3)", "+2+1 Drill", "Verb 2"),
-                        SpokenSentence(3, "See - Saw - Seen", "பார் (V1 - V2 - V3)", "+2+1 Drill", "Verb 3"),
-                        SpokenSentence(4, "Take - Took - Taken", "எடு (V1 - V2 - V3)", "+2+1 Drill", "Verb 4"),
-                        SpokenSentence(5, "Give - Gave - Given", "கொடு (V1 - V2 - V3)", "+2+1 Drill", "Verb 5"),
-                        SpokenSentence(6, "Write - Wrote - Written", "எழுது (V1 - V2 - V3)", "+2+1 Drill", "Verb 6"),
-                        SpokenSentence(7, "Speak - Spoke - Spoken", "பேசு (V1 - V2 - V3)", "+2+1 Drill", "Verb 7"),
-                        SpokenSentence(8, "Come - Came - Come", "வா (V1 - V2 - V3)", "+2+1 Drill", "Verb 8"),
-                        SpokenSentence(9, "Go - Went - Gone", "போ (V1 - V2 - V3)", "+2+1 Drill", "Verb 9"),
-                        SpokenSentence(10, "Buy - Bought - Bought", "வாங்கு (V1 - V2 - V3)", "+2+1 Drill", "Verb 10")
+                        SpokenSentence(1, "Eat - Ate - Eaten", "சாப்பிடு (நிகழ் - கடந்த - நிறைவு)", "1 விநாடி இடைவெளியுடன் கேளுங்கள்", "Verb 1"),
+                        SpokenSentence(2, "Drink - Drank - Drunk", "குடி (நிகழ் - கடந்த - நிறைவு)", "1 விநாடி இடைவெளியுடன் கேளுங்கள்", "Verb 2"),
+                        SpokenSentence(3, "See - Saw - Seen", "பார் (நிகழ் - கடந்த - நிறைவு)", "1 விநாடி இடைவெளியுடன் கேளுங்கள்", "Verb 3"),
+                        SpokenSentence(4, "Take - Took - Taken", "எடு (நிகழ் - கடந்த - நிறைவு)", "1 விநாடி இடைவெளியுடன் கேளுங்கள்", "Verb 4"),
+                        SpokenSentence(5, "Give - Gave - Given", "கொடு (நிகழ் - கடந்த - நிறைவு)", "1 விநாடி இடைவெளியுடன் கேளுங்கள்", "Verb 5"),
+                        SpokenSentence(6, "Write - Wrote - Written", "எழுது (நிகழ் - கடந்த - நிறைவு)", "1 விநாடி இடைவெளியுடன் கேளுங்கள்", "Verb 6"),
+                        SpokenSentence(7, "Speak - Spoke - Spoken", "பேசு (நிகழ் - கடந்த - நிறைவு)", "1 விநாடி இடைவெளியுடன் கேளுங்கள்", "Verb 7"),
+                        SpokenSentence(8, "Come - Came - Come", "வா (நிகழ் - கடந்த - நிறைவு)", "1 விநாடி இடைவெளியுடன் கேளுங்கள்", "Verb 8"),
+                        SpokenSentence(9, "Go - Went - Gone", "போ (நிகழ் - கடந்த - நிறைவு)", "1 விநாடி இடைவெளியுடன் கேளுங்கள்", "Verb 9"),
+                        SpokenSentence(10, "Buy - Bought - Bought", "வாங்கு (நிகழ் - கடந்த - நிறைவு)", "1 விநாடி இடைவெளியுடன் கேளுங்கள்", "Verb 10"),
+                        SpokenSentence(11, "Run - Ran - Run", "ஓடு (நிகழ் - கடந்த - நிறைவு)", "1 விநாடி இடைவெளியுடன் கேளுங்கள்", "Verb 11"),
+                        SpokenSentence(12, "Read - Read - Read", "படி (நிகழ் - கடந்த - நிறைவு)", "1 விநாடி இடைவெளியுடன் கேளுங்கள்", "Verb 12"),
+                        SpokenSentence(13, "Sing - Sang - Sung", "பாடு (நிகழ் - கடந்த - நிறைவு)", "1 விநாடி இடைவெளியுடன் கேளுங்கள்", "Verb 13"),
+                        SpokenSentence(14, "Know - Knew - Known", "தெரிந்துகொள் (நிகழ் - கடந்த - நிறைவு)", "1 விநாடி இடைவெளியுடன் கேளுங்கள்", "Verb 14"),
+                        SpokenSentence(15, "Drive - Drove - Driven", "வாகனம் ஓட்டு (நிகழ் - கடந்த - நிறைவு)", "1 விநாடி இடைவெளியுடன் கேளுங்கள்", "Verb 15"),
+                        SpokenSentence(16, "Sleep - Slept - Slept", "தூங்கு (நிகழ் - கடந்த - நிறைவு)", "1 விநாடி இடைவெளியுடன் கேளுங்கள்", "Verb 16"),
+                        SpokenSentence(17, "Think - Thought - Thought", "சிந்தி (நிகழ் - கடந்த - நிறைவு)", "1 விநாடி இடைவெளியுடன் கேளுங்கள்", "Verb 17"),
+                        SpokenSentence(18, "Teach - Taught - Taught", "கற்றுக்கொடு (நிகழ் - கடந்த - நிறைவு)", "1 விநாடி இடைவெளியுடன் கேளுங்கள்", "Verb 18"),
+                        SpokenSentence(19, "Make - Made - Made", "உருவாக்கு (நிகழ் - கடந்த - நிறைவு)", "1 விநாடி இடைவெளியுடன் கேளுங்கள்", "Verb 19"),
+                        SpokenSentence(20, "Help - Helped - Helped", "உதவு (நிகழ் - கடந்த - நிறைவு)", "1 விநாடி இடைவெளியுடன் கேளுங்கள்", "Verb 20")
                     )
                 )
             )

@@ -184,6 +184,7 @@ fun HomeScreenWrapper(
     HomeScreen(
         onNavigate = onNavigate,
         onMenuClick = onMenuClick,
-        onProfileClick = onProfileClick
+        onProfileClick = onProfileClick,
+        onKeyClick = onKeyClick
     )
 }

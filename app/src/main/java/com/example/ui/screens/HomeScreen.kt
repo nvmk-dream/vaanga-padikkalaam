@@ -99,14 +99,14 @@ fun HomeScreen(
             accentColor = SubikshaSkyBlue
         ),
         HomeFeatureItem(
-            id = "explore",
-            title = "அறிவுப் பெட்டகம்",
-            englishSubtitle = "Thirukkural, Proverbs & Science",
-            description = "தினசரி திருக்குறள் உரை, அருமையான தமிழ் பழமொழிகள் மற்றும் வியக்க வைக்கும் அறிவியல் தகவல்கள்.",
-            icon = Icons.Default.Explore,
+            id = "my_library",
+            title = "என் நூலகம்",
+            englishSubtitle = "My Library • Your Books",
+            description = "தமிழ், English, கணிதம், அறிவியல் என உங்கள் பாடப் புத்தகங்கள், PDF மற்றும் படங்களைச் சேமித்து வாசிக்கலாம்.",
+            icon = Icons.Default.CollectionsBookmark,
             drawableRes = R.drawable.card_more_features,
-            badge = "KNOWLEDGE",
-            accentColor = SubikshaNavy
+            badge = "உங்கள் புத்தகம்",
+            accentColor = SubikshaRoyalPurple
         )
     )
 

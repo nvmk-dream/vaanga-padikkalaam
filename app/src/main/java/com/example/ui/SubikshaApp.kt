@@ -134,6 +134,12 @@ fun SubikshaApp() {
                         onBackClick = { navigateBack() }
                     )
                 }
+                "my_library" -> {
+                    MyLibraryScreen(
+                        onBackClick = { navigateBack() },
+                        onMenuClick = { coroutineScope.launch { drawerState.open() } }
+                    )
+                }
                 "more_features", "explore" -> {
                     ExploreScreen(
                         onBackClick = { navigateBack() },

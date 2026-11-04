@@ -4,7 +4,10 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.ImageDecoder
 import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
 import android.speech.tts.TextToSpeech
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -118,7 +121,7 @@ fun ImageToTextScreen(
             selectedImageUri = null
             isProcessing = true
             coroutineScope.launch {
-                delay(1200) // Simulate fast intelligent OCR
+                delay(1000)
                 ocrResult = ImageOcrProcessor.processExtractedText(ocrResult.rawEnglishText)
                 editedText = ocrResult.rawEnglishText
                 isProcessing = false
@@ -143,10 +146,25 @@ fun ImageToTextScreen(
     ) { uri ->
         if (uri != null) {
             selectedImageUri = uri
-            capturedBitmap = null
+            try {
+                val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    val source = ImageDecoder.createSource(context.contentResolver, uri)
+                    ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
+                        decoder.isMutableRequired = true
+                        decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                    }
+                } else {
+                    @Suppress("DEPRECATION")
+                    MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
+                }
+                capturedBitmap = bitmap
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
             isProcessing = true
             coroutineScope.launch {
-                delay(1200) // Simulate fast OCR
+                delay(1200) // Simulate intelligent OCR scanning
                 ocrResult = ImageOcrProcessor.processExtractedText(ocrResult.rawEnglishText)
                 editedText = ocrResult.rawEnglishText
                 isProcessing = false
@@ -207,6 +225,8 @@ fun ImageToTextScreen(
                 // Quick Action: Retake / Demo Switcher
                 IconButton(
                     onClick = {
+                        capturedBitmap = null
+                        selectedImageUri = null
                         ocrResult = if (ocrResult.originalHeading == ImageOcrProcessor.referenceBookResult.originalHeading) {
                             ImageOcrProcessor.scienceSample
                         } else {
@@ -513,12 +533,12 @@ private fun BookImagePreviewCard(
                 } else if (bitmap != null) {
                     Image(
                         bitmap = bitmap.asImageBitmap(),
-                        contentDescription = "Captured Book Image",
+                        contentDescription = "Selected Book Image",
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(200.dp)
+                            .heightIn(min = 180.dp, max = 260.dp)
                             .clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Fit
                     )
                 } else {
                     // Printed Book Page simulation matching Reference Screenshot

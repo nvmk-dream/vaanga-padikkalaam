@@ -10,6 +10,9 @@ import android.os.Build
 import android.provider.MediaStore
 import android.speech.tts.TextToSpeech
 import android.widget.Toast
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
@@ -112,6 +115,34 @@ fun ImageToTextScreen(
         snackbarMessage = "$label நகலெடுக்கப்பட்டது!"
     }
 
+    fun runOcrOnBitmap(bitmap: Bitmap) {
+        isProcessing = true
+        try {
+            val image = InputImage.fromBitmap(bitmap, 0)
+            val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+            recognizer.process(image)
+                .addOnSuccessListener { visionText ->
+                    val text = visionText.text.trim()
+                    if (text.isNotEmpty()) {
+                        ocrResult = ImageOcrProcessor.processExtractedText(text)
+                        editedText = ocrResult.rawEnglishText
+                        Toast.makeText(context, "பாடப்புத்தக உரை வெற்றிகரமாகப் பெறப்பட்டது!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "படத்தில் தெளிவான ஆங்கில உரை கண்டறியப்படவில்லை.", Toast.LENGTH_SHORT).show()
+                    }
+                    isProcessing = false
+                }
+                .addOnFailureListener { e ->
+                    e.printStackTrace()
+                    Toast.makeText(context, "OCR பிழை: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                    isProcessing = false
+                }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            isProcessing = false
+        }
+    }
+
     // Camera Launcher
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
@@ -119,14 +150,7 @@ fun ImageToTextScreen(
         if (bitmap != null) {
             capturedBitmap = bitmap
             selectedImageUri = null
-            isProcessing = true
-            coroutineScope.launch {
-                delay(1000)
-                ocrResult = ImageOcrProcessor.processExtractedText(ocrResult.rawEnglishText)
-                editedText = ocrResult.rawEnglishText
-                isProcessing = false
-                Toast.makeText(context, "படத்தில் உள்ள உரை வெற்றிகரமாக கண்டறியப்பட்டது!", Toast.LENGTH_SHORT).show()
-            }
+            runOcrOnBitmap(bitmap)
         }
     }
 
@@ -158,17 +182,12 @@ fun ImageToTextScreen(
                     MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
                 }
                 capturedBitmap = bitmap
+                if (bitmap != null) {
+                    runOcrOnBitmap(bitmap)
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
-            }
-
-            isProcessing = true
-            coroutineScope.launch {
-                delay(1200) // Simulate intelligent OCR scanning
-                ocrResult = ImageOcrProcessor.processExtractedText(ocrResult.rawEnglishText)
-                editedText = ocrResult.rawEnglishText
-                isProcessing = false
-                Toast.makeText(context, "கேலரி படத்திலிருந்து உரை பெறப்பட்டது!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "படத்தை ஏற்றுவதில் பிழை ஏற்பட்டது.", Toast.LENGTH_SHORT).show()
             }
         }
     }

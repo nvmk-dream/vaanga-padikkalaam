@@ -524,7 +524,7 @@ fun ImageToTextScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        ocrResult = ImageOcrProcessor.processExtractedText(editedText)
+                        ocrResult = ImageOcrProcessor.buildFallbackResult(editedText)
                         showEditDialog = false
                         Toast.makeText(context, "உரை புதுப்பிக்கப்பட்டது!", Toast.LENGTH_SHORT).show()
                     },

@@ -3,6 +3,8 @@ package com.example.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import com.example.data.ApiKeyManager
+import com.example.data.GeminiService
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
@@ -67,6 +69,8 @@ fun ImageToTextScreen(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val apiKeyManager = remember { ApiKeyManager(context) }
+    val geminiService = remember { GeminiService(apiKeyManager) }
 
     // State management
     var selectedTab by remember { mutableStateOf(OcrTab.TAMIL_TRANSLATION) } // Match reference screenshot
@@ -74,6 +78,7 @@ fun ImageToTextScreen(
     var capturedBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var isProcessing by remember { mutableStateOf(false) }
+    var processingStatus by remember { mutableStateOf("படத்தில் உள்ள உரையை AI வாசிக்கிறது...") }
     var showEditDialog by remember { mutableStateOf(false) }
     var editedText by remember { mutableStateOf(ocrResult.rawEnglishText) }
     var snackbarMessage by remember { mutableStateOf<String?>(null) }
@@ -117,25 +122,60 @@ fun ImageToTextScreen(
 
     fun runOcrOnBitmap(bitmap: Bitmap) {
         isProcessing = true
+        processingStatus = "பாடப்புத்தக உரையை ஸ்கேன் செய்கிறது..."
         try {
             val image = InputImage.fromBitmap(bitmap, 0)
             val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
             recognizer.process(image)
                 .addOnSuccessListener { visionText ->
-                    val text = visionText.text.trim()
-                    if (text.isNotEmpty()) {
-                        ocrResult = ImageOcrProcessor.processExtractedText(text)
+                    val ocrRaw = visionText.text.trim()
+                    
+                    // Show preliminary extracted text immediately so user gets fast feedback
+                    if (ocrRaw.isNotEmpty()) {
+                        ocrResult = ImageOcrProcessor.buildFallbackResult(ocrRaw)
                         editedText = ocrResult.rawEnglishText
-                        Toast.makeText(context, "பாடப்புத்தக உரை வெற்றிகரமாகப் பெறப்பட்டது!", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(context, "படத்தில் தெளிவான ஆங்கில உரை கண்டறியப்படவில்லை.", Toast.LENGTH_SHORT).show()
                     }
-                    isProcessing = false
+
+                    // Now call Gemini Vision to accurately inspect the image & OCR text
+                    processingStatus = "சுபிக்ஷா AI ஆசிரியர் பாடத்தை ஆழமாகப் பகுப்பாய்வு செய்கிறது..."
+                    coroutineScope.launch {
+                        try {
+                            val aiResult = geminiService.analyzeBookImage(bitmap, ocrRaw)
+                            aiResult.onSuccess { structuredResult ->
+                                ocrResult = structuredResult
+                                editedText = structuredResult.rawEnglishText
+                                Toast.makeText(context, "பாடப்புத்தகம் வெற்றிகரமாக ஆய்வு செய்யப்பட்டது!", Toast.LENGTH_SHORT).show()
+                            }.onFailure { err ->
+                                Toast.makeText(context, "AI விளக்கம்: ${err.localizedMessage ?: "OCR உரை மட்டும் காட்டப்படுகிறது"}", Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        } finally {
+                            isProcessing = false
+                        }
+                    }
                 }
                 .addOnFailureListener { e ->
                     e.printStackTrace()
-                    Toast.makeText(context, "OCR பிழை: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
-                    isProcessing = false
+                    // If ML Kit fails, still try sending the raw image directly to Gemini Vision
+                    processingStatus = "AI ஆசிரியர் படத்தை நேரடியாகப் படிக்கிறது..."
+                    coroutineScope.launch {
+                        try {
+                            val aiResult = geminiService.analyzeBookImage(bitmap, "")
+                            aiResult.onSuccess { structuredResult ->
+                                ocrResult = structuredResult
+                                editedText = structuredResult.rawEnglishText
+                                Toast.makeText(context, "பாடப்புத்தகம் வெற்றிகரமாக ஆய்வு செய்யப்பட்டது!", Toast.LENGTH_SHORT).show()
+                            }.onFailure { err ->
+                                Toast.makeText(context, "பிழை: ${err.localizedMessage}", Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (ex: Exception) {
+                            ex.printStackTrace()
+                            Toast.makeText(context, "OCR பிழை: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                        } finally {
+                            isProcessing = false
+                        }
+                    }
                 }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -301,6 +341,7 @@ fun ImageToTextScreen(
                         bitmap = capturedBitmap,
                         ocrResult = ocrResult,
                         isProcessing = isProcessing,
+                        processingStatus = processingStatus,
                         cyanBorder = cyanBorder,
                         onCameraClick = {
                             cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
@@ -510,6 +551,7 @@ private fun BookImagePreviewCard(
     bitmap: Bitmap?,
     ocrResult: OcrResult,
     isProcessing: Boolean,
+    processingStatus: String,
     cyanBorder: Color,
     onCameraClick: () -> Unit,
     onGalleryClick: () -> Unit
@@ -543,10 +585,11 @@ private fun BookImagePreviewCard(
                         CircularProgressIndicator(color = Color(0xFF0077B6))
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "படத்தில் உள்ள உரையை AI வாசிக்கிறது...",
+                            text = processingStatus,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1E293B)
+                            color = Color(0xFF1E293B),
+                            textAlign = TextAlign.Center
                         )
                     }
                 } else if (bitmap != null) {

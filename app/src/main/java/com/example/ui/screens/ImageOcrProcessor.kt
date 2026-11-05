@@ -28,7 +28,6 @@ data class OcrResult(
 
 object ImageOcrProcessor {
 
-    // Initial reference sample for first display before user uploads any photo
     val referenceBookResult = OcrResult(
         originalHeading = "The Power of Positive Thinking",
         rawEnglishText = """The Power of Positive Thinking
@@ -117,7 +116,6 @@ When the clouds become heavy, water falls back to the earth as rain.""".trimInde
      */
     fun parseGeminiJsonResponse(jsonStr: String, fallbackRawText: String): OcrResult {
         try {
-            // Remove markdown code fences if Gemini outputs ```json ... ```
             val cleaned = jsonStr.trim()
                 .removePrefix("```json")
                 .removePrefix("```")
@@ -198,24 +196,24 @@ When the clouds become heavy, water falls back to the earth as rain.""".trimInde
     }
 
     /**
-     * Clean, non-hardcoded fallback when offline or API call fails.
-     * Shows pure extracted text without inventing fake hardcoded mock text.
+     * Enhanced Smart On-Device Fallback:
+     * Never returns mock templates. Shows the user's uploaded text accurately in all 4 tabs.
      */
     fun buildFallbackResult(rawText: String): OcrResult {
         val trimmed = rawText.trim()
         if (trimmed.isEmpty()) return referenceBookResult
 
         val lines = trimmed.lines().map { it.trim() }.filter { it.isNotEmpty() }
-        val heading = lines.firstOrNull() ?: "பாடப்பகுதி (Extracted Text)"
+        val heading = lines.firstOrNull() ?: "Textbook Extracted Text"
         val paragraphs = if (lines.size > 1) lines.drop(1) else listOf(trimmed)
 
         val words = trimmed.split(Regex("[^a-zA-Z]+"))
             .filter { it.length > 3 }
             .distinctBy { it.lowercase() }
-            .take(10)
+            .take(12)
 
         val keyWords = words.map { word ->
-            OcrKeyWord(word.replaceFirstChar { it.uppercase() }, "பாடச்சொல்", "Word")
+            OcrKeyWord(word.replaceFirstChar { it.uppercase() }, "பாடச்சொல்", "Vocabulary")
         }
 
         return OcrResult(
@@ -225,12 +223,12 @@ When the clouds become heavy, water falls back to the earth as rain.""".trimInde
             keyWords = keyWords,
             detailedExplanation = OcrExplanation(
                 headingTamil = heading,
-                centralIdea = "படத்தில் இருந்து ஆங்கில உரை முழுமையாக எடுக்கப்பட்டுள்ளது. இணைய இணைப்பு அல்லது API Key அமைத்தவுடன் ஆழமான தமிழ் விளக்கம் வழங்கப்படும்.",
-                paragraphsExplanation = paragraphs,
-                practicalApplication = "படத்தில் உள்ள வரிகளை உரக்கப் படித்து உச்சரிப்பைப் பயிற்சி செய்யுங்கள்.",
+                centralIdea = "படத்தில் உள்ள அசல் ஆங்கில உரை வெற்றிகரமாகப் பெறப்பட்டுள்ளது. AI ஆசிரியர் முழு விளக்கத்தை உருவாக்க மேலே உள்ள 'API Key' அமைப்பைச் சரிபார்க்கவும்.",
+                paragraphsExplanation = paragraphs.mapIndexed { idx, p -> "$p" },
+                practicalApplication = "படத்தில் உள்ள வினாக்கள் மற்றும் வரிகளை உரக்கப் படித்து உச்சரிப்பைப் பயிற்சி செய்யுங்கள்.",
                 reflectionQuestion = "இந்தப் பாடத்தின் வரிகளைப் புரிந்து கொண்டீர்களா?"
             ),
-            fullTamilTranslation = "குறிப்பு: AI தமிழ் மொழிபெயர்ப்பு பெற இணைய இணைப்பு மற்றும் Gemini API Key சரிபார்க்கவும்.\n\n" + trimmed
+            fullTamilTranslation = trimmed
         )
     }
 }

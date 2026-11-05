@@ -50,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.components.ApiKeyDialog
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -73,15 +74,17 @@ fun ImageToTextScreen(
     val geminiService = remember { GeminiService(apiKeyManager) }
 
     // State management
-    var selectedTab by remember { mutableStateOf(OcrTab.TAMIL_TRANSLATION) } // Match reference screenshot
+    var selectedTab by remember { mutableStateOf(OcrTab.TAMIL_TRANSLATION) }
     var ocrResult by remember { mutableStateOf(ImageOcrProcessor.referenceBookResult) }
     var capturedBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var isProcessing by remember { mutableStateOf(false) }
     var processingStatus by remember { mutableStateOf("படத்தில் உள்ள உரையை AI வாசிக்கிறது...") }
     var showEditDialog by remember { mutableStateOf(false) }
+    var showKeyDialog by remember { mutableStateOf(false) }
     var editedText by remember { mutableStateOf(ocrResult.rawEnglishText) }
     var snackbarMessage by remember { mutableStateOf<String?>(null) }
+    var hasValidKey by remember { mutableStateOf(apiKeyManager.getApiKey().isNotBlank()) }
 
     // Text to Speech
     var ttsEngine by remember { mutableStateOf<TextToSpeech?>(null) }
@@ -130,51 +133,40 @@ fun ImageToTextScreen(
                 .addOnSuccessListener { visionText ->
                     val ocrRaw = visionText.text.trim()
                     
-                    // Show preliminary extracted text immediately so user gets fast feedback
+                    // Show preliminary extracted text immediately
                     if (ocrRaw.isNotEmpty()) {
                         ocrResult = ImageOcrProcessor.buildFallbackResult(ocrRaw)
                         editedText = ocrResult.rawEnglishText
                     }
 
-                    // Now call Gemini Vision to accurately inspect the image & OCR text
+                    // Call Gemini Vision to accurately inspect the image & OCR text
                     processingStatus = "சுபிக்ஷா AI ஆசிரியர் பாடத்தை ஆழமாகப் பகுப்பாய்வு செய்கிறது..."
                     coroutineScope.launch {
-                        try {
-                            val aiResult = geminiService.analyzeBookImage(bitmap, ocrRaw)
-                            aiResult.onSuccess { structuredResult ->
-                                ocrResult = structuredResult
-                                editedText = structuredResult.rawEnglishText
-                                Toast.makeText(context, "பாடப்புத்தகம் வெற்றிகரமாக ஆய்வு செய்யப்பட்டது!", Toast.LENGTH_SHORT).show()
-                            }.onFailure { err ->
-                                Toast.makeText(context, "AI விளக்கம்: ${err.localizedMessage ?: "OCR உரை மட்டும் காட்டப்படுகிறது"}", Toast.LENGTH_SHORT).show()
-                            }
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        } finally {
-                            isProcessing = false
+                        val aiResult = geminiService.analyzeBookImage(bitmap, ocrRaw)
+                        aiResult.onSuccess { structuredResult ->
+                            ocrResult = structuredResult
+                            editedText = structuredResult.rawEnglishText
+                            Toast.makeText(context, "பாடப்புத்தகம் வெற்றிகரமாக ஆய்வு செய்யப்பட்டது!", Toast.LENGTH_SHORT).show()
+                        }.onFailure { err ->
+                            val msg = err.localizedMessage ?: "AI ஆய்வு தோல்வியடைந்தது"
+                            Toast.makeText(context, "AI ஆய்வு: $msg", Toast.LENGTH_LONG).show()
                         }
+                        isProcessing = false
                     }
                 }
                 .addOnFailureListener { e ->
                     e.printStackTrace()
-                    // If ML Kit fails, still try sending the raw image directly to Gemini Vision
                     processingStatus = "AI ஆசிரியர் படத்தை நேரடியாகப் படிக்கிறது..."
                     coroutineScope.launch {
-                        try {
-                            val aiResult = geminiService.analyzeBookImage(bitmap, "")
-                            aiResult.onSuccess { structuredResult ->
-                                ocrResult = structuredResult
-                                editedText = structuredResult.rawEnglishText
-                                Toast.makeText(context, "பாடப்புத்தகம் வெற்றிகரமாக ஆய்வு செய்யப்பட்டது!", Toast.LENGTH_SHORT).show()
-                            }.onFailure { err ->
-                                Toast.makeText(context, "பிழை: ${err.localizedMessage}", Toast.LENGTH_SHORT).show()
-                            }
-                        } catch (ex: Exception) {
-                            ex.printStackTrace()
-                            Toast.makeText(context, "OCR பிழை: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
-                        } finally {
-                            isProcessing = false
+                        val aiResult = geminiService.analyzeBookImage(bitmap, "")
+                        aiResult.onSuccess { structuredResult ->
+                            ocrResult = structuredResult
+                            editedText = structuredResult.rawEnglishText
+                            Toast.makeText(context, "பாடப்புத்தகம் வெற்றிகரமாக ஆய்வு செய்யப்பட்டது!", Toast.LENGTH_SHORT).show()
+                        }.onFailure { err ->
+                            Toast.makeText(context, "AI பிழை: ${err.localizedMessage}", Toast.LENGTH_LONG).show()
                         }
+                        isProcessing = false
                     }
                 }
         } catch (e: Exception) {
@@ -232,24 +224,22 @@ fun ImageToTextScreen(
         }
     }
 
-    // Palette matching the Reference Screenshot (Dark Navy + Cyan-Blue neon)
-    val backgroundDark = Color(0xFF030712) // Midnight Black/Navy
-    val cardBackground = Color(0xFF0B1528) // Deep Blue Navy Card
-    val cyanAccent = Color(0xFF00B4D8)     // Neon Cyan Blue
-    val cyanDark = Color(0xFF0077B6)       // Darker Ocean Blue
-    val cyanBorder = Color(0xFF0284C7)     // Border cyan
+    val backgroundDark = Color(0xFF030712)
+    val cardBackground = Color(0xFF0B1528)
+    val cyanAccent = Color(0xFF00B4D8)
+    val cyanDark = Color(0xFF0077B6)
+    val cyanBorder = Color(0xFF0284C7)
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = backgroundDark
-    ) { innerPadding ->
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .statusBarsPadding()
+                .padding(paddingValues)
         ) {
-            // 1. Top App Bar matching screenshot
+            // Top Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -259,9 +249,9 @@ fun ImageToTextScreen(
                 IconButton(
                     onClick = onBackClick,
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(40.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.08f))
+                        .background(Color.White.copy(alpha = 0.1f))
                         .testTag("ocr_back_button")
                 ) {
                     Icon(
@@ -271,7 +261,7 @@ fun ImageToTextScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
                 Text(
                     text = "Image to Text",
@@ -281,7 +271,26 @@ fun ImageToTextScreen(
                     modifier = Modifier.weight(1f)
                 )
 
-                // Quick Action: Retake / Demo Switcher
+                // API Key Setup Button
+                IconButton(
+                    onClick = { showKeyDialog = true },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(if (hasValidKey) Color(0xFF10B981).copy(alpha = 0.2f) else cyanAccent.copy(alpha = 0.15f))
+                        .testTag("ocr_api_key_btn")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Key,
+                        contentDescription = "Gemini Key",
+                        tint = if (hasValidKey) Color(0xFF10B981) else cyanAccent,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(6.dp))
+
+                // Demo Switcher
                 IconButton(
                     onClick = {
                         capturedBitmap = null
@@ -308,7 +317,7 @@ fun ImageToTextScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
 
                 IconButton(
                     onClick = { onAskGemini("இந்தப் புத்தக உரையை மேலும் ஆழமாக எனக்குத் தமிழில் விளக்குங்கள்:\n${ocrResult.rawEnglishText}") },
@@ -335,7 +344,7 @@ fun ImageToTextScreen(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // 2. Original Book Image / Captured Photo Preview
+                // Book Image / Captured Photo Preview
                 item {
                     BookImagePreviewCard(
                         bitmap = capturedBitmap,
@@ -356,34 +365,26 @@ fun ImageToTextScreen(
                     )
                 }
 
-                // 3. Four Tabs Bar matching Screenshot exactly
+                // 4 Interactive Navigation Tabs
                 item {
-                    OcrTabsSegment(
+                    OcrTabsRow(
                         selectedTab = selectedTab,
                         onTabSelected = { selectedTab = it },
-                        cyanAccent = cyanAccent,
-                        cyanDark = cyanDark
+                        cyanAccent = cyanAccent
                     )
                 }
 
-                // 4. Result Screen Card based on active Tab
+                // Tab Content Card
                 item {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(
-                                BorderStroke(1.2.dp, cyanBorder.copy(alpha = 0.7f)),
-                                RoundedCornerShape(18.dp)
-                            )
-                            .shadow(8.dp, RoundedCornerShape(18.dp)),
+                            .border(BorderStroke(1.dp, Color(0xFF1E293B)), RoundedCornerShape(18.dp))
+                            .shadow(6.dp, RoundedCornerShape(18.dp)),
                         colors = CardDefaults.cardColors(containerColor = cardBackground),
                         shape = RoundedCornerShape(18.dp)
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(18.dp)
-                        ) {
+                        Box(modifier = Modifier.padding(16.dp)) {
                             when (selectedTab) {
                                 OcrTab.EXTRACTED_TEXT -> {
                                     ExtractedTextTabContent(
@@ -432,7 +433,7 @@ fun ImageToTextScreen(
                 }
             }
 
-            // 5. Bottom Cyan Gradient Action Button matching Reference Screenshot
+            // Bottom Action Button
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -495,13 +496,24 @@ fun ImageToTextScreen(
         }
     }
 
-    // Edit Text Dialog
+    // Key Setup Dialog
+    if (showKeyDialog) {
+        ApiKeyDialog(
+            onDismiss = { showKeyDialog = false },
+            onKeySaved = {
+                hasValidKey = apiKeyManager.getApiKey().isNotBlank()
+                capturedBitmap?.let { runOcrOnBitmap(it) }
+            }
+        )
+    }
+
+    // Edit Extracted Text Dialog
     if (showEditDialog) {
         AlertDialog(
             onDismissRequest = { showEditDialog = false },
             title = {
                 Text(
-                    text = "ஆங்கில உரையைத் திருத்துக",
+                    text = "ஆங்கில உரையைத் திருத்து",
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
@@ -543,9 +555,6 @@ fun ImageToTextScreen(
     }
 }
 
-// ==============================================================
-// 1. Book Image Preview Card (Real Photo or Reference Book Style)
-// ==============================================================
 @Composable
 private fun BookImagePreviewCard(
     bitmap: Bitmap?,
@@ -569,13 +578,12 @@ private fun BookImagePreviewCard(
                 .fillMaxWidth()
                 .padding(12.dp)
         ) {
-            // Realistic Book Page Container
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 210.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(Color(0xFFF9F7F1)) // Classic cream book page color
+                    .background(Color(0xFFF9F7F1))
                     .border(BorderStroke(1.dp, Color(0xFFD4CEB8)), RoundedCornerShape(14.dp))
                     .padding(18.dp),
                 contentAlignment = Alignment.Center
@@ -603,7 +611,6 @@ private fun BookImagePreviewCard(
                         contentScale = ContentScale.Fit
                     )
                 } else {
-                    // Printed Book Page simulation matching Reference Screenshot
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Text(
                             text = ocrResult.originalHeading,
@@ -620,144 +627,113 @@ private fun BookImagePreviewCard(
                             Text(
                                 text = paragraph,
                                 fontSize = 14.sp,
-                                fontWeight = FontWeight.Normal,
                                 fontFamily = FontFamily.Serif,
                                 color = Color(0xFF334155),
-                                lineHeight = 20.sp
+                                lineHeight = 20.sp,
+                                modifier = Modifier.padding(vertical = 3.dp)
                             )
-                            Spacer(modifier = Modifier.height(6.dp))
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // Two Main Buttons: Take Photo & From Gallery
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Button(
-                    onClick = onCameraClick,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(44.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7))
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PhotoCamera,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "படம் எடு (Camera)",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
+                Text(
+                    text = if (bitmap != null) "✓ தேர்ந்தெடுக்கப்பட்ட படம்" else "உதாரணப் பாடப் புத்தகம்",
+                    fontSize = 12.sp,
+                    color = Color.LightGray,
+                    fontStyle = FontStyle.Italic
+                )
 
-                OutlinedButton(
-                    onClick = onGalleryClick,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(44.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, Color(0xFF00B4D8))
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PhotoLibrary,
-                        contentDescription = null,
-                        tint = Color(0xFF00B4D8),
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Gallery-லிருந்து",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF00B4D8)
-                    )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = onCameraClick,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0077B6)),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier.testTag("ocr_camera_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PhotoCamera,
+                            contentDescription = "Camera",
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Camera", fontSize = 12.sp, color = Color.White)
+                    }
+
+                    Button(
+                        onClick = onGalleryClick,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier.testTag("ocr_gallery_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PhotoLibrary,
+                            contentDescription = "Gallery",
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Gallery", fontSize = 12.sp, color = Color.White)
+                    }
                 }
             }
         }
     }
 }
 
-// ==============================================================
-// 2. Four Tabs Segment (Matching Reference Screenshot)
-// ==============================================================
 @Composable
-private fun OcrTabsSegment(
+private fun OcrTabsRow(
     selectedTab: OcrTab,
     onTabSelected: (OcrTab) -> Unit,
-    cyanAccent: Color,
-    cyanDark: Color
+    cyanAccent: Color
 ) {
-    Surface(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(46.dp),
-        shape = RoundedCornerShape(14.dp),
-        color = Color(0xFF081224),
-        border = BorderStroke(1.2.dp, cyanAccent.copy(alpha = 0.5f))
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color(0xFF0D182E))
+            .border(BorderStroke(1.dp, Color(0xFF1E293B)), RoundedCornerShape(14.dp))
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OcrTab.values().forEach { tab ->
-                val isSelected = tab == selectedTab
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(
-                            if (isSelected) {
-                                Brush.horizontalGradient(
-                                    colors = listOf(cyanAccent, cyanDark)
-                                )
-                            } else {
-                                Brush.horizontalGradient(
-                                    colors = listOf(Color.Transparent, Color.Transparent)
-                                )
-                            }
-                        )
-                        .clickable { onTabSelected(tab) }
-                        .testTag("ocr_tab_${tab.name.lowercase()}"),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = tab.title,
-                        fontSize = 13.sp,
-                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
-                        color = if (isSelected) Color.White else Color(0xFF94A3B8),
-                        textAlign = TextAlign.Center
+        OcrTab.values().forEach { tab ->
+            val isSelected = tab == selectedTab
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(
+                        if (isSelected) cyanAccent else Color.Transparent
                     )
-                }
-
-                if (tab != OcrTab.values().last() && !isSelected) {
-                    Box(
-                        modifier = Modifier
-                            .width(1.dp)
-                            .height(20.dp)
-                            .background(Color.White.copy(alpha = 0.15f))
-                    )
-                }
+                    .clickable { onTabSelected(tab) }
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = tab.title,
+                    fontSize = 12.sp,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    color = if (isSelected) Color(0xFF030712) else Color(0xFF94A3B8),
+                    textAlign = TextAlign.Center,
+                    maxLines = 1
+                )
             }
         }
     }
 }
 
-// ==============================================================
-// 3. Tab 1 Content: உரை (Extracted Text)
-// ==============================================================
 @Composable
 private fun ExtractedTextTabContent(
     ocrResult: OcrResult,
@@ -824,7 +800,7 @@ private fun ExtractedTextTabContent(
             }
         }
 
-        Divider(
+        HorizontalDivider(
             color = Color.White.copy(alpha = 0.1f),
             modifier = Modifier.padding(vertical = 12.dp)
         )
@@ -839,9 +815,6 @@ private fun ExtractedTextTabContent(
     }
 }
 
-// ==============================================================
-// 4. Tab 2 Content: முக்கிய சொற்கள் (Key Words)
-// ==============================================================
 @Composable
 private fun KeyWordsTabContent(
     keyWords: List<OcrKeyWord>,
@@ -897,7 +870,7 @@ private fun KeyWordsTabContent(
             }
         }
 
-        Divider(
+        HorizontalDivider(
             color = Color.White.copy(alpha = 0.1f),
             modifier = Modifier.padding(vertical = 12.dp)
         )
@@ -963,9 +936,6 @@ private fun KeyWordsTabContent(
     }
 }
 
-// ==============================================================
-// 5. Tab 3 Content: விளக்கம் (Detailed Explanation)
-// ==============================================================
 @Composable
 private fun ExplanationTabContent(
     explanation: OcrExplanation,
@@ -1012,7 +982,7 @@ private fun ExplanationTabContent(
             }
         }
 
-        Divider(
+        HorizontalDivider(
             color = Color.White.copy(alpha = 0.1f),
             modifier = Modifier.padding(vertical = 12.dp)
         )
@@ -1089,9 +1059,6 @@ private fun ExplanationTabContent(
     }
 }
 
-// ==============================================================
-// 6. Tab 4 Content: தமிழில் (Full Tamil Translation)
-// ==============================================================
 @Composable
 private fun TamilTranslationTabContent(
     translation: String,
@@ -1138,18 +1105,24 @@ private fun TamilTranslationTabContent(
             }
         }
 
-        Divider(
+        HorizontalDivider(
             color = Color.White.copy(alpha = 0.1f),
             modifier = Modifier.padding(vertical = 12.dp)
         )
 
-        // Translation text matching Screenshot typography exactly
-        Text(
-            text = translation,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Medium,
-            color = Color.White,
-            lineHeight = 24.sp
-        )
+        Surface(
+            color = Color(0xFF0F2038),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = translation,
+                fontSize = 15.sp,
+                color = Color(0xFFE0F2FE),
+                lineHeight = 24.sp,
+                fontWeight = FontWeight.Normal,
+                modifier = Modifier.padding(14.dp)
+            )
+        }
     }
 }

@@ -43,16 +43,15 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
             )
         }
 
-        val primaryModel = "gemini-2.5-flash"
-        val fallbackModel = "gemini-1.5-flash"
+        // Standard official Gemini models
+        val primaryModel = "gemini-1.5-flash"
+        val fallbackModel = "gemini-2.0-flash"
 
-        // Try primary model first, fallback if not found
         val firstAttempt = callGeminiApi(primaryModel, apiKey, conversation, customPrompt)
         if (firstAttempt.isSuccess) {
             return@withContext firstAttempt
         }
 
-        // If 404 or model not found, try fallback
         val secondAttempt = callGeminiApi(fallbackModel, apiKey, conversation, customPrompt)
         if (secondAttempt.isSuccess) {
             return@withContext secondAttempt
@@ -153,23 +152,25 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
 
     /**
      * Complete Vision + OCR analysis function for ImageToText:
-     * - Takes both the Bitmap and OCR recognized text
-     * - Resolves OCR recognition errors using visual confirmation
-     * - Preserves question numbering, MCQ choices (a, b, c, d), headings, and paragraphs
-     * - Returns strictly formatted JSON parsed into OcrResult
+     * - Uses official gemini-1.5-flash and gemini-2.0-flash models
+     * - Accurately passes image and OCR text
+     * - Preserves question numbering, MCQ choices, headings, and paragraphs
+     * - Returns explicit Result.failure if API fails so UI can inform the user
      */
     suspend fun analyzeBookImage(
         bitmap: Bitmap,
         ocrExtractedText: String
     ): Result<OcrResult> = withContext(Dispatchers.IO) {
-        val apiKey = apiKeyManager.getApiKey()
+        val apiKey = apiKeyManager.getApiKey().trim()
         if (apiKey.isBlank()) {
-            // Graceful fallback to pure extracted text when user hasn't configured an API key yet
-            return@withContext Result.success(ImageOcrProcessor.buildFallbackResult(ocrExtractedText))
+            return@withContext Result.failure(
+                IllegalStateException("Gemini API Key அமைக்கப்படவில்லை. திரையின் மேலே உள்ள 'API Key' பட்டனைத் தொட்டு உங்கள் Google AI Studio Key-ஐ உள்ளிடவும்.")
+            )
         }
 
-        val primaryModel = "gemini-2.5-flash"
-        val fallbackModel = "gemini-1.5-flash"
+        // Try primary stable model gemini-1.5-flash, fallback to gemini-2.0-flash
+        val primaryModel = "gemini-1.5-flash"
+        val fallbackModel = "gemini-2.0-flash"
 
         val firstAttempt = callGeminiVisionApi(primaryModel, apiKey, bitmap, ocrExtractedText)
         if (firstAttempt.isSuccess) {
@@ -181,8 +182,8 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
             return@withContext secondAttempt
         }
 
-        // If network/API error, return fallback result without failing the UI
-        Result.success(ImageOcrProcessor.buildFallbackResult(ocrExtractedText))
+        // Return the actual failure reason (e.g. Invalid API Key, Quota Exceeded)
+        return@withContext firstAttempt
     }
 
     private fun callGeminiVisionApi(
@@ -212,7 +213,7 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
 
             val rootJson = JSONObject()
 
-            // System prompt instructing strictly structured JSON response for educational tutoring
+            // System instruction
             val systemInstruction = JSONObject()
             val systemParts = JSONArray().apply {
                 put(JSONObject().put("text", """
@@ -220,8 +221,8 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
                     You analyze school textbook pages, exercises, lessons, questions, and comprehension passages.
                     
                     TASK RULES:
-                    1. Read both the user's uploaded textbook image and the preliminary OCR text: "$ocrExtractedText".
-                    2. Correct any OCR mistakes by checking the image carefully. Preserve question numbers (1, 2, 3..), MCQ choices (a, b, c..), headings, and paragraph sequence.
+                    1. Read both the uploaded textbook image and the OCR text.
+                    2. Correct any OCR mistakes by checking the image carefully. Preserve question numbers (1, 2, 3..), MCQ choices (a, b, c, d..), headings, and paragraph sequence.
                     3. Do not invent missing facts.
                     4. Output MUST be ONLY valid JSON matching this exact schema:
                     {
@@ -257,8 +258,13 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
             userContent.put("role", "user")
 
             val partsArray = JSONArray()
-            // 1. Text prompt part
-            partsArray.put(JSONObject().put("text", "Please analyze this textbook page. OCR raw text for reference: \n$ocrExtractedText\nProvide the complete structured JSON response."))
+            // 1. Text prompt part (Safely isolated)
+            val promptText = if (ocrExtractedText.isNotBlank()) {
+                "Please analyze this textbook page. The OCR preliminary text is:\n$ocrExtractedText\nProvide the complete structured JSON response."
+            } else {
+                "Please analyze this textbook page image and provide the complete structured JSON response."
+            }
+            partsArray.put(JSONObject().put("text", promptText))
 
             // 2. Image part
             val inlineData = JSONObject()
@@ -272,8 +278,8 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
 
             // Generation config with JSON response type
             val genConfig = JSONObject()
-            genConfig.put("temperature", 0.3)
-            genConfig.put("maxOutputTokens", 2500)
+            genConfig.put("temperature", 0.2)
+            genConfig.put("maxOutputTokens", 3000)
             genConfig.put("responseMimeType", "application/json")
             rootJson.put("generationConfig", genConfig)
 
@@ -287,13 +293,20 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
             val responseBody = response.body?.string().orEmpty()
 
             if (!response.isSuccessful) {
-                return Result.failure(Exception("Gemini Vision HTTP ${response.code}: $responseBody"))
+                val errorMsg = try {
+                    val errJson = JSONObject(responseBody)
+                    val err = errJson.optJSONObject("error")
+                    err?.optString("message") ?: "API Error HTTP ${response.code}"
+                } catch (_: Exception) {
+                    "HTTP Error ${response.code}: $responseBody"
+                }
+                return Result.failure(Exception(errorMsg))
             }
 
             val resJson = JSONObject(responseBody)
             val candidates = resJson.optJSONArray("candidates")
             if (candidates == null || candidates.length() == 0) {
-                return Result.failure(Exception("பதில் கிடைக்கவில்லை."))
+                return Result.failure(Exception("AI-லிருந்து பதில் கிடைக்கவில்லை."))
             }
 
             val firstCandidate = candidates.getJSONObject(0)
@@ -302,7 +315,7 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
             val text = parts?.optJSONObject(0)?.optString("text")
 
             if (text.isNullOrBlank()) {
-                return Result.failure(Exception("பதில் காலியாக உள்ளது."))
+                return Result.failure(Exception("AI பதில் காலியாக உள்ளது."))
             }
 
             val result = ImageOcrProcessor.parseGeminiJsonResponse(text, ocrExtractedText)

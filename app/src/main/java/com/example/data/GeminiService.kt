@@ -151,52 +151,56 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
     }
 
     /**
-     * Complete Vision + OCR analysis function for ImageToText:
-     * - Uses official gemini-1.5-flash and gemini-2.0-flash models
-     * - Accurately passes image and OCR text
-     * - Preserves question numbering, MCQ choices, headings, and paragraphs
-     * - Returns explicit Result.failure if API fails so UI can inform the user
+     * High-Precision Direct Multimodal Vision Analysis for Worksheets & Textbooks:
+     * - Examines the image directly with Gemini Vision without corrupting OCR input
+     * - Preserves question numbering (1, 2, 3..), MCQ choices ((a), (b), (c), (d)..), and line sequence
+     * - Uses model cascade (gemini-2.5-flash -> gemini-2.0-flash -> gemini-1.5-flash)
+     * - Generates step-by-step solutions, key vocabulary, and natural Tamil translation
      */
-    suspend fun analyzeBookImage(
-        bitmap: Bitmap,
-        ocrExtractedText: String
+    suspend fun analyzeBookImageDirect(
+        bitmap: Bitmap
     ): Result<OcrResult> = withContext(Dispatchers.IO) {
         val apiKey = apiKeyManager.getApiKey().trim()
         if (apiKey.isBlank()) {
             return@withContext Result.failure(
-                IllegalStateException("Gemini API Key அமைக்கப்படவில்லை. திரையின் மேலே உள்ள 'API Key' பட்டனைத் தொட்டு உங்கள் Google AI Studio Key-ஐ உள்ளிடவும்.")
+                IllegalStateException("Gemini API Key அமைக்கப்படவில்லை. திரையின் மேலே உள்ள 'Key' பட்டனைத் தொட்டு உங்கள் Google AI Studio Key-ஐ உள்ளிடவும்.")
             )
         }
 
-        // Try primary stable model gemini-1.5-flash, fallback to gemini-2.0-flash
-        val primaryModel = "gemini-1.5-flash"
-        val fallbackModel = "gemini-2.0-flash"
+        val models = listOf("gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash")
+        var lastFailure: Result<OcrResult> = Result.failure(Exception("AI இணைப்பு தோல்வியடைந்தது."))
 
-        val firstAttempt = callGeminiVisionApi(primaryModel, apiKey, bitmap, ocrExtractedText)
-        if (firstAttempt.isSuccess) {
-            return@withContext firstAttempt
+        for (model in models) {
+            val attempt = callGeminiVisionApiDirect(model, apiKey, bitmap)
+            if (attempt.isSuccess) {
+                return@withContext attempt
+            }
+            lastFailure = attempt
         }
 
-        val secondAttempt = callGeminiVisionApi(fallbackModel, apiKey, bitmap, ocrExtractedText)
-        if (secondAttempt.isSuccess) {
-            return@withContext secondAttempt
-        }
-
-        // Return the actual failure reason (e.g. Invalid API Key, Quota Exceeded)
-        return@withContext firstAttempt
+        return@withContext lastFailure
     }
 
-    private fun callGeminiVisionApi(
+    /**
+     * Backward-compatible overload for analyzeBookImage
+     */
+    suspend fun analyzeBookImage(
+        bitmap: Bitmap,
+        ocrExtractedText: String = ""
+    ): Result<OcrResult> {
+        return analyzeBookImageDirect(bitmap)
+    }
+
+    private fun callGeminiVisionApiDirect(
         modelName: String,
         apiKey: String,
-        bitmap: Bitmap,
-        ocrExtractedText: String
+        bitmap: Bitmap
     ): Result<OcrResult> {
         return try {
             val url = "https://generativelanguage.googleapis.com/v1beta/models/$modelName:generateContent?key=$apiKey"
 
-            // Resize large bitmaps to save bandwidth & stay well within API limits
-            val maxDimension = 1280
+            // High resolution (up to 1600px) with 90% quality so small worksheet font is crystal clear
+            val maxDimension = 1600
             val scaledBitmap = if (bitmap.width > maxDimension || bitmap.height > maxDimension) {
                 val ratio = bitmap.width.toFloat() / bitmap.height.toFloat()
                 val targetW = if (ratio > 1) maxDimension else (maxDimension * ratio).toInt()
@@ -207,7 +211,7 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
             }
 
             val baos = ByteArrayOutputStream()
-            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 85, baos)
+            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 90, baos)
             val imageBytes = baos.toByteArray()
             val base64Image = Base64.encodeToString(imageBytes, Base64.NO_WRAP)
 
@@ -218,17 +222,23 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
             val systemParts = JSONArray().apply {
                 put(JSONObject().put("text", """
                     You are 'Subiksha Teacher' (சுபிக்ஷா ஆசிரியர்), an expert school teacher assisting Tamil-medium students.
-                    You analyze school textbook pages, exercises, lessons, questions, and comprehension passages.
-                    
-                    TASK RULES:
-                    1. Read both the uploaded textbook image and the OCR text.
-                    2. Correct any OCR mistakes by checking the image carefully. Preserve question numbers (1, 2, 3..), MCQ choices (a, b, c, d..), headings, and paragraph sequence.
-                    3. Do not invent missing facts.
-                    4. Output MUST be ONLY valid JSON matching this exact schema:
+                    You analyze school textbook pages, worksheets, exam questions, exercises, and comprehension passages.
+
+                    CRITICAL TASK RULES FOR WORKSHEET & TEXTBOOK IMAGE ANALYSIS:
+                    1. Read the uploaded image directly with extreme precision.
+                    2. TRANSCRIBE ALL TEXT ACCURATELY: Extract the complete English text exactly as printed on the worksheet/book in its natural reading order (top to bottom, sections 1, 2, 3..).
+                    3. PRESERVE NUMBERING & CHOICES: Strictly keep question numbers (1, 2, 3..), sub-questions / multiple choice options ((a), (b), (c), (d)..), fill-in-the-blanks, matching columns, and headings intact and properly attached to their corresponding sentences. Never separate choice letters from their text.
+                    4. SPELLING & CLARITY: Correct any printing blurriness or layout distortion. Ensure correct English spelling (e.g. 'Name the following', 'Give examples', 'soil microbes', 'revolves around', 'biodegradable').
+                    5. EXPLANATIONS & SOLUTIONS: In 'paragraphsExplanation', provide step-by-step solutions/answers with friendly, clear Tamil explanations for each question shown.
+                    6. KEY WORDS: Extract 6-12 important vocabulary words with accurate Tamil meanings and parts of speech.
+                    7. Output MUST be ONLY valid JSON matching this exact schema:
                     {
-                      "heading": "Lesson / Exercise Title in English",
-                      "extractedText": "Full, accurate, corrected English text from the textbook page",
-                      "paragraphs": ["Paragraph or Question 1", "Paragraph or Question 2"],
+                      "heading": "Worksheet / Lesson Title in English (e.g. Formative Assessment-IV)",
+                      "extractedText": "Full, accurate, properly ordered English text of all questions and sections from the page",
+                      "paragraphs": [
+                        "Full text of Question / Section 1 with all its sub-parts (a, b, c, d...)",
+                        "Full text of Question / Section 2 with all its sub-parts (a, b, c, d...)"
+                      ],
                       "keyWords": [
                         {
                           "english": "Vocabulary Word",
@@ -238,15 +248,15 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
                       ],
                       "explanation": {
                         "headingTamil": "பாடத் தலைப்பு (தமிழில்)",
-                        "centralIdea": "பாடத்தின் மையக்கருத்து (எளிய தமிழில்)",
+                        "centralIdea": "பாடப்பகுதி அல்லது வினாத்தாளின் மையக் கருத்து (எளிய தமிழில்)",
                         "paragraphsExplanation": [
-                          "1. முதல் பத்தி அல்லது கேள்விக்கான தனித்தனி விளக்கம்",
-                          "2. அடுத்த பத்தி அல்லது கேள்விக்கான தனித்தனி விளக்கம்"
+                          "1. முதல் வினா/பகுதிக்கான தெளிவான தீர்வு மற்றும் தமிழ்க் கருத்து விளக்கம் விடையுடன்",
+                          "2. இரண்டாம் வினா/பகுதிக்கான தெளிவான தீர்வு மற்றும் தமிழ்க் கருத்து விளக்கம் விடையுடன்"
                         ],
-                        "practicalApplication": "மாணவர்கள் நடைமுறை வாழ்வில் அல்லது தேர்வில் பயன்படுத்த வேண்டிய குறிப்பு",
+                        "practicalApplication": "மாணவர்கள் தேர்வில் அல்லது நடைமுறையில் நினைவில் கொள்ள வேண்டிய முக்கியக் குறிப்பு",
                         "reflectionQuestion": "மாணவர்கள் சிந்திக்க ஒரு வினா"
                       },
-                      "tamilTranslation": "முழு ஆங்கிலப் பாடப்பகுதியின் இயல்பான, இலக்கணப் பிழையற்ற தூய தமிழாக்கம். தலைப்பு, கேள்விகள், விருப்பங்கள் அனைத்தும் தமிழில் மொழிபெயர்க்கப்பட வேண்டும்."
+                      "tamilTranslation": "முழு ஆங்கிலப் பாடப்பகுதி/வினாத்தாளின் இயல்பான, இலக்கணப் பிழையற்ற தூய தமிழாக்கம். தலைப்புகள், வினாக்கள், விருப்பங்கள் அனைத்தும் தமிழில் மொழிபெயர்க்கப்பட வேண்டும்."
                     }
                 """.trimIndent()))
             }
@@ -258,15 +268,8 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
             userContent.put("role", "user")
 
             val partsArray = JSONArray()
-            // 1. Text prompt part (Safely isolated)
-            val promptText = if (ocrExtractedText.isNotBlank()) {
-                "Please analyze this textbook page. The OCR preliminary text is:\n$ocrExtractedText\nProvide the complete structured JSON response."
-            } else {
-                "Please analyze this textbook page image and provide the complete structured JSON response."
-            }
-            partsArray.put(JSONObject().put("text", promptText))
+            partsArray.put(JSONObject().put("text", "Please read this school worksheet / textbook page image directly. Extract the entire text accurately in correct order without omitting any questions, options, or numbers, and provide the complete structured JSON response with solutions and Tamil explanation."))
 
-            // 2. Image part
             val inlineData = JSONObject()
             inlineData.put("mime_type", "image/jpeg")
             inlineData.put("data", base64Image)
@@ -278,8 +281,8 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
 
             // Generation config with JSON response type
             val genConfig = JSONObject()
-            genConfig.put("temperature", 0.2)
-            genConfig.put("maxOutputTokens", 3000)
+            genConfig.put("temperature", 0.1)
+            genConfig.put("maxOutputTokens", 4096)
             genConfig.put("responseMimeType", "application/json")
             rootJson.put("generationConfig", genConfig)
 
@@ -318,7 +321,7 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
                 return Result.failure(Exception("AI பதில் காலியாக உள்ளது."))
             }
 
-            val result = ImageOcrProcessor.parseGeminiJsonResponse(text, ocrExtractedText)
+            val result = ImageOcrProcessor.parseGeminiJsonResponse(text, "")
             Result.success(result)
         } catch (e: Exception) {
             Result.failure(e)

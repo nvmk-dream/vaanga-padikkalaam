@@ -123,55 +123,64 @@ fun ImageToTextScreen(
         snackbarMessage = "$label நகலெடுக்கப்பட்டது!"
     }
 
-    fun runOcrOnBitmap(bitmap: Bitmap) {
-        isProcessing = true
-        processingStatus = "பாடப்புத்தக உரையை ஸ்கேன் செய்கிறது..."
+    fun runMlKitOffline(bitmap: Bitmap, reasonMessage: String) {
+        processingStatus = "ஆஃப்லைன் ஸ்கேனர் உரையைப் பெறுகிறது..."
         try {
             val image = InputImage.fromBitmap(bitmap, 0)
             val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
             recognizer.process(image)
                 .addOnSuccessListener { visionText ->
                     val ocrRaw = visionText.text.trim()
-                    
-                    // Show preliminary extracted text immediately
                     if (ocrRaw.isNotEmpty()) {
                         ocrResult = ImageOcrProcessor.buildFallbackResult(ocrRaw)
                         editedText = ocrResult.rawEnglishText
+                        Toast.makeText(context, "$reasonMessage: ஆஃப்லைன் உரை எடுக்கப்பட்டது.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "படத்தில் உரை எதுவும் கண்டறியப்படவில்லை.", Toast.LENGTH_LONG).show()
                     }
-
-                    // Call Gemini Vision to accurately inspect the image & OCR text
-                    processingStatus = "சுபிக்ஷா AI ஆசிரியர் பாடத்தை ஆழமாகப் பகுப்பாய்வு செய்கிறது..."
-                    coroutineScope.launch {
-                        val aiResult = geminiService.analyzeBookImage(bitmap, ocrRaw)
-                        aiResult.onSuccess { structuredResult ->
-                            ocrResult = structuredResult
-                            editedText = structuredResult.rawEnglishText
-                            Toast.makeText(context, "பாடப்புத்தகம் வெற்றிகரமாக ஆய்வு செய்யப்பட்டது!", Toast.LENGTH_SHORT).show()
-                        }.onFailure { err ->
-                            val msg = err.localizedMessage ?: "AI ஆய்வு தோல்வியடைந்தது"
-                            Toast.makeText(context, "AI ஆய்வு: $msg", Toast.LENGTH_LONG).show()
-                        }
-                        isProcessing = false
-                    }
+                    isProcessing = false
                 }
                 .addOnFailureListener { e ->
                     e.printStackTrace()
-                    processingStatus = "AI ஆசிரியர் படத்தை நேரடியாகப் படிக்கிறது..."
-                    coroutineScope.launch {
-                        val aiResult = geminiService.analyzeBookImage(bitmap, "")
-                        aiResult.onSuccess { structuredResult ->
-                            ocrResult = structuredResult
-                            editedText = structuredResult.rawEnglishText
-                            Toast.makeText(context, "பாடப்புத்தகம் வெற்றிகரமாக ஆய்வு செய்யப்பட்டது!", Toast.LENGTH_SHORT).show()
-                        }.onFailure { err ->
-                            Toast.makeText(context, "AI பிழை: ${err.localizedMessage}", Toast.LENGTH_LONG).show()
-                        }
-                        isProcessing = false
-                    }
+                    Toast.makeText(context, "ஸ்கேன் தோல்வியடைந்தது: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                    isProcessing = false
                 }
         } catch (e: Exception) {
             e.printStackTrace()
             isProcessing = false
+        }
+    }
+
+    fun runOcrOnBitmap(bitmap: Bitmap) {
+        isProcessing = true
+
+        if (!apiKeyManager.hasValidKey()) {
+            processingStatus = "Gemini API Key அமைக்கப்படவில்லை..."
+            Toast.makeText(
+                context,
+                "Gemini Vision பயன்படுத்த மேலே உள்ள 'Key' பட்டனைத் தொட்டு API Key உள்ளிடவும்.",
+                Toast.LENGTH_LONG
+            ).show()
+            showKeyDialog = true
+            runMlKitOffline(bitmap, "API Key இல்லாததால்")
+            return
+        }
+
+        processingStatus = "சுபிக்ஷா AI ஆசிரியர் படத்தை நேரடியாக வாசிக்கிறது (Gemini Vision)..."
+
+        coroutineScope.launch {
+            val aiResult = geminiService.analyzeBookImageDirect(bitmap)
+            aiResult.onSuccess { structuredResult ->
+                ocrResult = structuredResult
+                editedText = structuredResult.rawEnglishText
+                selectedTab = OcrTab.EXTRACTED_TEXT
+                Toast.makeText(context, "பாடப்புத்தகம் வெற்றிகரமாக ஆய்வு செய்யப்பட்டது!", Toast.LENGTH_SHORT).show()
+                isProcessing = false
+            }.onFailure { err ->
+                val errorMsg = err.localizedMessage ?: "AI ஆய்வு தோல்வியடைந்தது"
+                Toast.makeText(context, "AI பிழை: $errorMsg (ஆஃப்லைன் ஸ்கேனர் இயக்கப்படுகிறது)", Toast.LENGTH_LONG).show()
+                runMlKitOffline(bitmap, "AI பிழை ஏற்பட்டதால்")
+            }
         }
     }
 

@@ -111,30 +111,50 @@ When the clouds become heavy, water falls back to the earth as rain.""".trimInde
 மேகங்கள் கனமாகும்போது, நீர் மழையாக மீண்டும் பூமியில் விழுகிறது.""".trimIndent()
     )
 
-    /**
-     * Parses the structured JSON returned by Gemini Vision AI
-     */
-    fun parseGeminiJsonResponse(jsonStr: String, fallbackRawText: String): OcrResult {
-        try {
-            val cleaned = jsonStr.trim()
-                .removePrefix("```json")
+    private fun cleanJsonString(raw: String): String {
+        val trimmed = raw.trim()
+        val start = trimmed.indexOf('{')
+        val end = trimmed.lastIndexOf('}')
+        return if (start != -1 && end != -1 && end > start) {
+            trimmed.substring(start, end + 1)
+        } else {
+            trimmed.removePrefix("```json")
                 .removePrefix("```")
                 .removeSuffix("```")
                 .trim()
+        }
+    }
 
+    /**
+     * Parses the structured JSON returned by Gemini Vision AI
+     */
+    fun parseGeminiJsonResponse(jsonStr: String, fallbackRawText: String = ""): OcrResult {
+        try {
+            val cleaned = cleanJsonString(jsonStr)
             val root = JSONObject(cleaned)
 
             val heading = root.optString("heading", "").ifBlank { "Textbook Lesson" }
-            val rawEnglish = root.optString("extractedText", "").ifBlank { fallbackRawText }
+            var rawEnglish = root.optString("extractedText", "").trim()
 
             val paragraphsList = mutableListOf<String>()
             val paragraphsArray = root.optJSONArray("paragraphs")
             if (paragraphsArray != null) {
                 for (i in 0 until paragraphsArray.length()) {
-                    paragraphsList.add(paragraphsArray.getString(i))
+                    val p = paragraphsArray.optString(i, "").trim()
+                    if (p.isNotEmpty()) {
+                        paragraphsList.add(p)
+                    }
                 }
             }
-            if (paragraphsList.isEmpty()) {
+
+            // If extractedText is blank, build from paragraphs or fallback
+            if (rawEnglish.isEmpty() && paragraphsList.isNotEmpty()) {
+                rawEnglish = paragraphsList.joinToString("\n\n")
+            } else if (rawEnglish.isEmpty()) {
+                rawEnglish = fallbackRawText
+            }
+
+            if (paragraphsList.isEmpty() && rawEnglish.isNotEmpty()) {
                 paragraphsList.addAll(rawEnglish.lines().map { it.trim() }.filter { it.isNotEmpty() })
             }
 
@@ -142,7 +162,7 @@ When the clouds become heavy, water falls back to the earth as rain.""".trimInde
             val keyWordsArray = root.optJSONArray("keyWords")
             if (keyWordsArray != null) {
                 for (i in 0 until keyWordsArray.length()) {
-                    val item = keyWordsArray.getJSONObject(i)
+                    val item = keyWordsArray.optJSONObject(i) ?: continue
                     val en = item.optString("english", "").trim()
                     val ta = item.optString("tamil", "").trim()
                     val pos = item.optString("partOfSpeech", "Word").trim()
@@ -162,23 +182,26 @@ When the clouds become heavy, water falls back to the earth as rain.""".trimInde
             val pExpArray = explanationObj?.optJSONArray("paragraphsExplanation")
             if (pExpArray != null) {
                 for (i in 0 until pExpArray.length()) {
-                    explanationList.add(pExpArray.getString(i))
+                    val exp = pExpArray.optString(i, "").trim()
+                    if (exp.isNotEmpty()) {
+                        explanationList.add(exp)
+                    }
                 }
             }
-            if (explanationList.isEmpty()) {
+            if (explanationList.isEmpty() && centralIdea.isNotEmpty()) {
                 explanationList.add(centralIdea)
             }
 
             val detailedExplanation = OcrExplanation(
-                headingTamil = headingTamil.ifBlank { "பாடக் கருத்து விளக்கம்" },
-                centralIdea = centralIdea.ifBlank { "பாடப்பகுதியின் வரிகளை ஆழ்ந்து கவனித்து வினா-விடைகளைப் பயிற்சி செய்யவும்." },
+                headingTamil = headingTamil.ifBlank { "பாடக் கருத்து விளக்கம் & தீர்வுகள்" },
+                centralIdea = centralIdea.ifBlank { "பாடப்பகுதியின் வினா-விடைகள் மற்றும் கருத்துகளை ஆழ்ந்து கவனிக்கவும்." },
                 paragraphsExplanation = explanationList,
                 practicalApplication = practicalApp,
                 reflectionQuestion = reflectionQ
             )
 
             val fullTamilTranslation = root.optString("tamilTranslation", "").ifBlank {
-                "பாடப்பகுதியின் மொழிபெயர்ப்பு உருவாக்கப்பட்டது."
+                "பாடப்பகுதியின் மொழிபெயர்ப்பு வெற்றிகரமாக உருவாக்கப்பட்டது."
             }
 
             return OcrResult(

@@ -15,16 +15,7 @@ import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.TimeUnit
 
-data class ChatMessage(
-    val id: String = java.util.UUID.randomUUID().toString(),
-    val text: String,
-    val isUser: Boolean,
-    val timestamp: Long = System.currentTimeMillis()
-)
-
-class DefaultQuotaExceededException(
-    message: String = "Default API quota முடிந்தது, App இல் API key store செய்யப்படவில்லை எனவே key யை ADD செய்யவும்"
-) : Exception(message)
+class DefaultQuotaExceededException(message: String) : Exception(message)
 
 class GeminiService(private val apiKeyManager: ApiKeyManager) {
 
@@ -43,25 +34,20 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
         val apiKey = apiKeyManager.getApiKey()
         if (apiKey.isBlank()) {
             return@withContext Result.failure(
-                IllegalStateException("Gemini API Key இன்னும் அமைக்கப்படவில்லை. மெனுவில் சென்று உங்கள் API Key-ஐ உள்ளிடவும்.")
+                IllegalStateException("Gemini API Key அமைக்கப்படவில்லை.")
             )
         }
 
-        // Standard official Gemini models
-        val primaryModel = "gemini-1.5-flash"
-        val fallbackModel = "gemini-2.0-flash"
-
-        val firstAttempt = callGeminiApi(primaryModel, apiKey, conversation, customPrompt)
-        if (firstAttempt.isSuccess) {
-            return@withContext firstAttempt
+        // Reliable flash models
+        val models = listOf("gemini-3.5-flash", "gemini-flash-latest", "gemini-3.8-flash")
+        for (model in models) {
+            val attempt = callGeminiApi(model, apiKey, conversation, customPrompt)
+            if (attempt.isSuccess) {
+                return@withContext attempt
+            }
         }
 
-        val secondAttempt = callGeminiApi(fallbackModel, apiKey, conversation, customPrompt)
-        if (secondAttempt.isSuccess) {
-            return@withContext secondAttempt
-        }
-
-        return@withContext firstAttempt
+        return@withContext Result.failure(Exception("AI ஆசிரியர் பதில் அளிக்க முடியவில்லை. தயவுசெய்து மீண்டும் முயற்சிக்கவும்."))
     }
 
     private fun callGeminiApi(
@@ -74,16 +60,13 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
             val url = "https://generativelanguage.googleapis.com/v1beta/models/$modelName:generateContent?key=$apiKey"
 
             val rootJson = JSONObject()
-
-            // System instruction
             val systemInstruction = JSONObject()
             val systemParts = JSONArray().apply {
-                put(JSONObject().put("text", "You are 'Subiksha Teacher' (சுபிக்ஷா ஆசிரியர்), a friendly, encouraging, expert Tamil & English teacher. You teach Tamil, English, Maths, Science, and life skills. Respond in friendly Tamil with clear English explanations where helpful. Keep explanations clear, engaging, and motivating for students."))
+                put(JSONObject().put("text", "You are 'Subiksha Teacher' (சுபிக்ஷா ஆசிரியர்), a friendly, encouraging, expert Tamil & English teacher. You teach Tamil, English, Maths, Science, and life skills. Respond in friendly Tamil with clear English explanations where helpful."))
             }
             systemInstruction.put("parts", systemParts)
             rootJson.put("system_instruction", systemInstruction)
 
-            // Contents array
             val contentsArray = JSONArray()
             conversation.takeLast(10).forEach { msg ->
                 val contentObj = JSONObject()
@@ -107,7 +90,6 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
 
             rootJson.put("contents", contentsArray)
 
-            // Generation config
             val genConfig = JSONObject()
             genConfig.put("temperature", 0.7)
             genConfig.put("maxOutputTokens", 1200)
@@ -116,6 +98,7 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
             val requestBody = rootJson.toString().toRequestBody(jsonMediaType)
             val request = Request.Builder()
                 .url(url)
+                .addHeader("X-goog-api-key", apiKey)
                 .post(requestBody)
                 .build()
 
@@ -128,7 +111,7 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
                     val err = errJson.optJSONObject("error")
                     err?.optString("message") ?: "API Error HTTP ${response.code}"
                 } catch (_: Exception) {
-                    "HTTP Error ${response.code}: ${response.message}"
+                    "HTTP Error ${response.code}: $responseBody"
                 }
                 return Result.failure(Exception(errorMsg))
             }
@@ -136,7 +119,7 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
             val resJson = JSONObject(responseBody)
             val candidates = resJson.optJSONArray("candidates")
             if (candidates == null || candidates.length() == 0) {
-                return Result.failure(Exception("பதில் கிடைக்கவில்லை. தயவுசெய்து மீண்டும் முயற்சிக்கவும்."))
+                return Result.failure(Exception("பதில் கிடைக்கவில்லை."))
             }
 
             val firstCandidate = candidates.getJSONObject(0)
@@ -155,62 +138,20 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
     }
 
     /**
-     * High-Precision Direct Multimodal Vision Analysis for Worksheets & Textbooks:
-     * - Examines the image directly with Gemini Vision without corrupting OCR input
-     * - First attempts with the built-in Code's Default Key
-     * - If default key quota is exhausted (HTTP 429 / Quota Exceeded):
-     *   * Automatically switches to user's saved key if available
-     *   * If user key is not stored, returns DefaultQuotaExceededException
-     * - Preserves question numbering (1, 2, 3..), MCQ choices ((a), (b), (c), (d)..), and line sequence
-     * - Uses model cascade (gemini-2.5-flash -> gemini-2.0-flash -> gemini-1.5-flash)
-     * - Generates step-by-step solutions, key vocabulary, and natural Tamil translation
+     * Direct Multimodal Vision API call for Textbook / Worksheet Analysis:
+     * - Uses user-specified key directly with fallback to user custom key
+     * - Supports gemini-3.5-flash, gemini-flash-latest, and gemini-3.8-flash
+     * - Sends both query key param and X-goog-api-key header for maximum compatibility
      */
     suspend fun analyzeBookImageDirect(
         bitmap: Bitmap
     ): Result<OcrResult> = withContext(Dispatchers.IO) {
-        val defaultKey = apiKeyManager.getDefaultApiKey().trim()
         val userKey = apiKeyManager.getUserCustomKey().trim()
+        val defaultKey = apiKeyManager.getDefaultApiKey().trim()
 
-        val models = listOf("gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash")
-
-        // 1. First try with Code's Default Key
-        if (defaultKey.isNotBlank()) {
-            var quotaExhausted = false
-            var lastDefaultError = ""
-
-            for (model in models) {
-                val attempt = callGeminiVisionApiDirect(model, defaultKey, bitmap)
-                if (attempt.isSuccess) {
-                    return@withContext attempt
-                }
-                val errMsg = attempt.exceptionOrNull()?.message.orEmpty()
-                lastDefaultError = errMsg
-                if (isQuotaExceededError(errMsg)) {
-                    quotaExhausted = true
-                    break
-                }
-            }
-
-            // If default key quota was exhausted:
-            if (quotaExhausted) {
-                // If user has stored an API key in the app, switch to it seamlessly!
-                if (userKey.isNotBlank()) {
-                    for (model in models) {
-                        val userAttempt = callGeminiVisionApiDirect(model, userKey, bitmap)
-                        if (userAttempt.isSuccess) {
-                            return@withContext userAttempt
-                        }
-                    }
-                } else {
-                    // User has not stored an API key in the app!
-                    return@withContext Result.failure(
-                        DefaultQuotaExceededException("Default API quota முடிந்தது, App இல் API key store செய்யப்படவில்லை எனவே key யை ADD செய்யவும்")
-                    )
-                }
-            }
-        }
-
-        // 2. If default key was not available or had non-quota failure, try user key if present
+        val models = listOf("gemini-3.5-flash", "gemini-flash-latest", "gemini-3.8-flash")
+        
+        // 1. Try with user custom key first if user added one!
         if (userKey.isNotBlank()) {
             for (model in models) {
                 val userAttempt = callGeminiVisionApiDirect(model, userKey, bitmap)
@@ -220,33 +161,22 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
             }
         }
 
-        // 3. If neither worked or neither key exists
-        if (defaultKey.isBlank() && userKey.isBlank()) {
-            return@withContext Result.failure(
-                DefaultQuotaExceededException("Default API quota முடிந்தது, App இல் API key store செய்யப்படவில்லை எனவே key யை ADD செய்யவும்")
-            )
+        // 2. Try with default key
+        if (defaultKey.isNotBlank()) {
+            var lastErrMsg = ""
+            for (model in models) {
+                val attempt = callGeminiVisionApiDirect(model, defaultKey, bitmap)
+                if (attempt.isSuccess) {
+                    return@withContext attempt
+                }
+                lastErrMsg = attempt.exceptionOrNull()?.message.orEmpty()
+            }
+            if (lastErrMsg.isNotBlank()) {
+                return@withContext Result.failure(Exception("AI பிழை: $lastErrMsg"))
+            }
         }
 
-        return@withContext Result.failure(Exception("AI இணைப்பு தோல்வியடைந்தது. தயவுசெய்து சிறிது நேரம் கழித்து மீண்டும் முயற்சிக்கவும்."))
-    }
-
-    private fun isQuotaExceededError(errorMsg: String): Boolean {
-        val lower = errorMsg.lowercase()
-        return lower.contains("429") ||
-                lower.contains("quota") ||
-                lower.contains("resource_exhausted") ||
-                lower.contains("rate limit") ||
-                lower.contains("too many requests")
-    }
-
-    /**
-     * Backward-compatible overload for analyzeBookImage
-     */
-    suspend fun analyzeBookImage(
-        bitmap: Bitmap,
-        ocrExtractedText: String = ""
-    ): Result<OcrResult> {
-        return analyzeBookImageDirect(bitmap)
+        return@withContext Result.failure(Exception("AI இணைப்பு தோல்வியடைந்தது. API Key-ஐ சரிபார்க்கவும்."))
     }
 
     private fun callGeminiVisionApiDirect(
@@ -257,7 +187,6 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
         return try {
             val url = "https://generativelanguage.googleapis.com/v1beta/models/$modelName:generateContent?key=$apiKey"
 
-            // High resolution (up to 1600px) with 90% quality so small worksheet font is crystal clear
             val maxDimension = 1600
             val scaledBitmap = if (bitmap.width > maxDimension || bitmap.height > maxDimension) {
                 val ratio = bitmap.width.toFloat() / bitmap.height.toFloat()
@@ -275,18 +204,17 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
 
             val rootJson = JSONObject()
 
-            // System instruction
             val systemInstruction = JSONObject()
             val systemParts = JSONArray().apply {
                 put(JSONObject().put("text", """
                     You are 'Subiksha Teacher' (சுபிக்ஷா ஆசிரியர்), an expert school teacher assisting Tamil-medium students.
                     You analyze school textbook pages, worksheets, exam questions, exercises, and comprehension passages.
-
+                    
                     CRITICAL TASK RULES FOR WORKSHEET & TEXTBOOK IMAGE ANALYSIS:
                     1. Read the uploaded image directly with extreme precision.
                     2. TRANSCRIBE ALL TEXT ACCURATELY: Extract the complete English text exactly as printed on the worksheet/book in its natural reading order (top to bottom, sections 1, 2, 3..).
                     3. PRESERVE NUMBERING & CHOICES: Strictly keep question numbers (1, 2, 3..), sub-questions / multiple choice options ((a), (b), (c), (d)..), fill-in-the-blanks, matching columns, and headings intact and properly attached to their corresponding sentences. Never separate choice letters from their text.
-                    4. SPELLING & CLARITY: Correct any printing blurriness or layout distortion. Ensure correct English spelling (e.g. 'Name the following', 'Give examples', 'soil microbes', 'revolves around', 'biodegradable').
+                    4. SPELLING & CLARITY: Correct any printing blurriness or layout distortion. Ensure correct English spelling.
                     5. EXPLANATIONS & SOLUTIONS: In 'paragraphsExplanation', provide step-by-step solutions/answers with friendly, clear Tamil explanations for each question shown.
                     6. KEY WORDS: Extract 6-12 important vocabulary words with accurate Tamil meanings and parts of speech.
                     7. Output MUST be ONLY valid JSON matching this exact schema:
@@ -337,7 +265,6 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
             contentsArray.put(userContent)
             rootJson.put("contents", contentsArray)
 
-            // Generation config with JSON response type
             val genConfig = JSONObject()
             genConfig.put("temperature", 0.1)
             genConfig.put("maxOutputTokens", 4096)
@@ -347,6 +274,7 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
             val requestBody = rootJson.toString().toRequestBody(jsonMediaType)
             val request = Request.Builder()
                 .url(url)
+                .addHeader("X-goog-api-key", apiKey)
                 .post(requestBody)
                 .build()
 
@@ -357,9 +285,9 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
                 val errorMsg = try {
                     val errJson = JSONObject(responseBody)
                     val err = errJson.optJSONObject("error")
-                    err?.optString("message") ?: "API Error HTTP ${response.code}"
+                    err?.optString("message") ?: "HTTP ${response.code}"
                 } catch (_: Exception) {
-                    "HTTP Error ${response.code}: $responseBody"
+                    "HTTP ${response.code}: $responseBody"
                 }
                 return Result.failure(Exception(errorMsg))
             }

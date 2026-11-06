@@ -74,11 +74,9 @@ fun ApiKeyDialog(
 
                 Text(
                     text = if (isCustomKey) {
-                        "தற்போது நீங்கள் உள்ளிட்ட தனிப்பட்ட Gemini API Key வெற்றிகரமாக இயங்குகிறது."
-                    } else if (apiKeyManager.hasValidKey()) {
-                        "பயன்பாட்டில் Build Key இயங்குகிறது. விருப்பப்பட்டால் உங்கள் சொந்த Google AI Studio Key-ஐ இங்கே மாற்றலாம்."
+                        "தற்போது நீங்கள் உள்ளிட்ட தனிப்பட்ட API Key இயங்குகிறது. விருப்பப்பட்டால் Rollback செய்து Default Key-க்கு மாறலாம்."
                     } else {
-                        "சுபிக்ஷா AI ஆசிரியர் படத்தை துல்லியமாக வாசிக்கவும், வினாக்களுக்கு விடையளிக்கவும் Google AI Studio API Key-ஐ இங்கே உள்ளிடவும்."
+                        "ஆப்பில் Built-in Default Key இயங்குகிறது! உங்களிடம் சொந்த Gemini Key இருந்தால் இங்கே உள்ளிடலாம்."
                     },
                     fontSize = 12.sp,
                     color = SubikshaTextMuted,
@@ -88,8 +86,8 @@ fun ApiKeyDialog(
                 OutlinedTextField(
                     value = keyText,
                     onValueChange = { keyText = it },
-                    label = { Text("Gemini API Key") },
-                    placeholder = { Text("AIzaSy...") },
+                    label = { Text("தனிப்பட்ட API Key (Custom Key)") },
+                    placeholder = { Text("AIzaSy... (காலியாக விட்டால் Default Key)") },
                     singleLine = true,
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {

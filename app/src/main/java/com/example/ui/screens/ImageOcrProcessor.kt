@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.regex.Pattern
 
 data class OcrKeyWord(
     val english: String,
@@ -32,13 +33,13 @@ object ImageOcrProcessor {
         originalHeading = "The Power of Positive Thinking",
         rawEnglishText = """The Power of Positive Thinking
 
-Positive thinking helps us stay happy, healthy and successful.
-It gives us confidence and helps us face challenges.
-When we think positively, we can achieve our goals and live a better life.""".trimIndent(),
+1. Positive thinking helps us stay happy, healthy and successful.
+2. It gives us confidence and helps us face challenges.
+3. When we think positively, we can achieve our goals and live a better life.""".trimIndent(),
         paragraphs = listOf(
-            "Positive thinking helps us stay happy, healthy and successful.",
-            "It gives us confidence and helps us face challenges.",
-            "When we think positively, we can achieve our goals and live a better life."
+            "1. Positive thinking helps us stay happy, healthy and successful.",
+            "2. It gives us confidence and helps us face challenges.",
+            "3. When we think positively, we can achieve our goals and live a better life."
         ),
         keyWords = listOf(
             OcrKeyWord("Power", "சக்தி / வலிமை", "Noun"),
@@ -67,22 +68,22 @@ When we think positively, we can achieve our goals and live a better life.""".tr
         ),
         fullTamilTranslation = """நேர்மறைச் சிந்தனையின் சக்தி
 
-நேர்மறையாகச் சிந்திப்பது நாம் மகிழ்ச்சியாகவும் ஆரோக்கியமாகவும் இருக்க உதவுகிறது.
-அது நமக்குத் தன்னம்பிக்கையை அளித்து, சவால்களை எதிர்கொள்ள உதவுகிறது.
-நாம் நேர்மறையாகச் சிந்திக்கும்போது, நமது இலக்குகளை அடைந்து சிறந்த வாழ்க்கையை வாழ முடியும்.""".trimIndent()
+1. நேர்மறையாகச் சிந்திப்பது நாம் மகிழ்ச்சியாகவும் ஆரோக்கியமாகவும் இருக்க உதவுகிறது.
+2. அது நமக்குத் தன்னம்பிக்கையை அளித்து, சவால்களை எதிர்கொள்ள உதவுகிறது.
+3. நாம் நேர்மறையாகச் சிந்திக்கும்போது, நமது இலக்குகளை அடைந்து சிறந்த வாழ்க்கையை வாழ முடியும்.""".trimIndent()
     )
 
     val scienceSample = OcrResult(
         originalHeading = "Water Cycle in Nature",
         rawEnglishText = """Water Cycle in Nature
 
-Water evaporates from oceans and lakes due to the heat of the sun.
-It forms clouds in the sky through condensation.
-When the clouds become heavy, water falls back to the earth as rain.""".trimIndent(),
+1. Water evaporates from oceans and lakes due to the heat of the sun.
+2. It forms clouds in the sky through condensation.
+3. When the clouds become heavy, water falls back to the earth as rain.""".trimIndent(),
         paragraphs = listOf(
-            "Water evaporates from oceans and lakes due to the heat of the sun.",
-            "It forms clouds in the sky through condensation.",
-            "When the clouds become heavy, water falls back to the earth as rain."
+            "1. Water evaporates from oceans and lakes due to the heat of the sun.",
+            "2. It forms clouds in the sky through condensation.",
+            "3. When the clouds become heavy, water falls back to the earth as rain."
         ),
         keyWords = listOf(
             OcrKeyWord("Water Cycle", "நீர் சுழற்சி", "Noun"),
@@ -106,9 +107,9 @@ When the clouds become heavy, water falls back to the earth as rain.""".trimInde
         ),
         fullTamilTranslation = """இயற்கையில் நீர் சுழற்சி
 
-சூரிய வெப்பத்தால் பெருங்கடல்கள் மற்றும் ஏரிகளிலிருந்து நீர் ஆவியாகிறது.
-அது ஒடுக்கம் மூலம் வானில் மேகங்களை உருவாக்குகிறது.
-மேகங்கள் கனமாகும்போது, நீர் மழையாக மீண்டும் பூமியில் விழுகிறது.""".trimIndent()
+1. சூரிய வெப்பத்தால் பெருங்கடல்கள் மற்றும் ஏரிகளிலிருந்து நீர் ஆவியாகிறது.
+2. அது ஒடுக்கம் மூலம் வானில் மேகங்களை உருவாக்குகிறது.
+3. மேகங்கள் கனமாகும்போது, நீர் மழையாக மீண்டும் பூமியில் விழுகிறது.""".trimIndent()
     )
 
     private fun cleanJsonString(raw: String): String {
@@ -218,40 +219,140 @@ When the clouds become heavy, water falls back to the earth as rain.""".trimInde
         }
     }
 
+    // High frequency school vocabulary mapping for on-device smart fallback
+    private val schoolDictionary = mapOf(
+        "photosynthesis" to ("ஒளிச்சேர்க்கை" to "Noun"),
+        "water" to ("நீர் / தண்ணீர்" to "Noun"),
+        "plants" to ("தாவரங்கள்" to "Noun"),
+        "animals" to ("விலங்குகள்" to "Noun"),
+        "heat" to ("வெப்பம்" to "Noun"),
+        "sun" to ("சூரியன்" to "Noun"),
+        "earth" to ("பூமி" to "Noun"),
+        "science" to ("அறிவியல்" to "Noun"),
+        "food" to ("உணவு" to "Noun"),
+        "soil" to ("மண்" to "Noun"),
+        "bacteria" to ("பாக்டீரியா" to "Noun"),
+        "fungi" to ("பூஞ்சை" to "Noun"),
+        "microbes" to ("நுண்ணுயிரிகள்" to "Noun"),
+        "microorganisms" to ("நுண்ணுயிரிகள்" to "Noun"),
+        "plastic" to ("நெகிழி (பிளாஸ்டிக்)" to "Noun"),
+        "pollution" to ("மாசுபாடு" to "Noun"),
+        "biodegradable" to ("மக்கும் பொருள்" to "Adjective"),
+        "non-biodegradable" to ("மக்காத பொருள்" to "Adjective"),
+        "environment" to ("சுற்றுச்சூழல்" to "Noun"),
+        "energy" to ("ஆற்றல்" to "Noun"),
+        "temperature" to ("வெப்பநிலை" to "Noun"),
+        "living" to ("உயிருள்ள" to "Adjective"),
+        "non-living" to ("உயிரற்ற" to "Adjective"),
+        "decomposers" to ("சிதைப்பவை" to "Noun"),
+        "producers" to ("உற்பத்தியாளர்கள்" to "Noun"),
+        "consumers" to ("நுகர்வோர்கள்" to "Noun"),
+        "revolves" to ("சுற்றுகிறது" to "Verb"),
+        "evaporates" to ("ஆவியாகிறது" to "Verb"),
+        "condensation" to ("ஒடுக்கம் / குளிர்விப்பு" to "Noun"),
+        "questions" to ("வினாக்கள்" to "Noun"),
+        "answers" to ("விடைகள்" to "Noun"),
+        "example" to ("உதாரணம்" to "Noun"),
+        "blanks" to ("கோடிட்ட இடங்கள்" to "Noun")
+    )
+
     /**
-     * Enhanced Smart On-Device Fallback:
-     * Never returns mock templates. Shows the user's uploaded text accurately in all 4 tabs.
+     * Enhanced Smart On-Device Layout Restructurer & Fallback:
+     * Restructures raw unformatted OCR text into clean, uniform numbered questions and paragraphs.
+     * Extracts real vocabulary and creates an intuitive educational layout without mock text.
      */
     fun buildFallbackResult(rawText: String): OcrResult {
         val trimmed = rawText.trim()
         if (trimmed.isEmpty()) return referenceBookResult
 
-        val lines = trimmed.lines().map { it.trim() }.filter { it.isNotEmpty() }
-        val heading = lines.firstOrNull() ?: "Textbook Extracted Text"
-        val paragraphs = if (lines.size > 1) lines.drop(1) else listOf(trimmed)
+        val rawLines = trimmed.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        
+        // Intelligent Question & Section Grouping Pattern
+        // Matches: 1., 1), (a), (b), A., B., Q1, I., II.
+        val questionPattern = Pattern.compile("^(\\d+[\\.\\)]|\\([a-zA-Z0-9]+\\)|[a-zA-Z][\\.\\)]|Q\\d+[:\\.]|I{1,3}[\\.\\)])\\s*")
 
-        val words = trimmed.split(Regex("[^a-zA-Z]+"))
+        val structuredParagraphs = mutableListOf<String>()
+        var currentSection = StringBuilder()
+
+        for (line in rawLines) {
+            if (questionPattern.matcher(line).find()) {
+                if (currentSection.isNotEmpty()) {
+                    structuredParagraphs.add(currentSection.toString().trim())
+                    currentSection = StringBuilder()
+                }
+                currentSection.append(line)
+            } else {
+                if (currentSection.isNotEmpty()) {
+                    currentSection.append(" ").append(line)
+                } else {
+                    structuredParagraphs.add(line)
+                }
+            }
+        }
+        if (currentSection.isNotEmpty()) {
+            structuredParagraphs.add(currentSection.toString().trim())
+        }
+
+        val heading = structuredParagraphs.firstOrNull() ?: "பாடப்பகுதி (Textbook Reading)"
+        val displayParagraphs = if (structuredParagraphs.size > 1) structuredParagraphs.drop(1) else structuredParagraphs
+
+        val uniformFormattedEnglish = buildString {
+            appendLine(heading)
+            appendLine()
+            displayParagraphs.forEachIndexed { index, p ->
+                appendLine(p)
+                if (index < displayParagraphs.size - 1) appendLine()
+            }
+        }
+
+        // Smart Vocabulary Extraction from the actual text
+        val allWords = trimmed.split(Regex("[^a-zA-Z\\-]+"))
             .filter { it.length > 3 }
             .distinctBy { it.lowercase() }
-            .take(12)
 
-        val keyWords = words.map { word ->
-            OcrKeyWord(word.replaceFirstChar { it.uppercase() }, "பாடச்சொல்", "Vocabulary")
+        val foundKeywords = mutableListOf<OcrKeyWord>()
+        for (w in allWords) {
+            val lower = w.lowercase()
+            schoolDictionary[lower]?.let { (tamil, pos) ->
+                foundKeywords.add(OcrKeyWord(w.replaceFirstChar { it.uppercase() }, tamil, pos))
+            }
+        }
+
+        // If dictionary didn't catch enough, add words from the actual text
+        if (foundKeywords.size < 8) {
+            for (w in allWords) {
+                if (foundKeywords.none { it.english.equals(w, ignoreCase = true) }) {
+                    foundKeywords.add(OcrKeyWord(w.replaceFirstChar { it.uppercase() }, "முக்கியச் சொல்", "Word"))
+                    if (foundKeywords.size >= 10) break
+                }
+            }
+        }
+
+        val detailedExplanations = displayParagraphs.mapIndexed { idx, p ->
+            "பகுதி ${idx + 1}: $p — இதில் உள்ள முக்கிய கருத்து மற்றும் வாக்கிய அமைப்பைக் கவனித்துப் படிக்கவும்."
+        }
+
+        val tamilTranslation = buildString {
+            appendLine("தலைப்பு: $heading")
+            appendLine()
+            displayParagraphs.forEachIndexed { idx, p ->
+                appendLine("${idx + 1}. $p")
+            }
         }
 
         return OcrResult(
             originalHeading = heading,
-            rawEnglishText = trimmed,
-            paragraphs = paragraphs,
-            keyWords = keyWords,
+            rawEnglishText = uniformFormattedEnglish,
+            paragraphs = displayParagraphs,
+            keyWords = foundKeywords.take(12),
             detailedExplanation = OcrExplanation(
                 headingTamil = heading,
-                centralIdea = "படத்தில் உள்ள அசல் ஆங்கில உரை வெற்றிகரமாகப் பெறப்பட்டுள்ளது. AI ஆசிரியர் முழு விளக்கத்தை உருவாக்க மேலே உள்ள 'API Key' அமைப்பைச் சரிபார்க்கவும்.",
-                paragraphsExplanation = paragraphs.mapIndexed { idx, p -> "$p" },
-                practicalApplication = "படத்தில் உள்ள வினாக்கள் மற்றும் வரிகளை உரக்கப் படித்து உச்சரிப்பைப் பயிற்சி செய்யுங்கள்.",
+                centralIdea = "பாடத்தின் வரிகள் வரிசைப்படி சீரமைக்கப்பட்டுள்ளன. முழுமையான ஆசிரியர் ஆய்வைப் பெற மேலே உள்ள 'Gemini Key' அமைப்பைச் சரிபார்க்கவும்.",
+                paragraphsExplanation = detailedExplanations,
+                practicalApplication = "படத்தில் உள்ள வினாக்கள் மற்றும் வாக்கியங்களை உரக்கப் படித்து உச்சரிப்பைப் பயிற்சி செய்யுங்கள்.",
                 reflectionQuestion = "இந்தப் பாடத்தின் வரிகளைப் புரிந்து கொண்டீர்களா?"
             ),
-            fullTamilTranslation = trimmed
+            fullTamilTranslation = tamilTranslation
         )
     }
 }

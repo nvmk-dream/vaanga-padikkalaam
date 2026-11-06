@@ -1013,13 +1013,45 @@ private fun ExtractedTextTabContent(
             modifier = Modifier.padding(vertical = 12.dp)
         )
 
-        Text(
-            text = ocrResult.rawEnglishText,
-            fontSize = 15.sp,
-            color = deepTextColor,
-            lineHeight = 22.sp,
-            fontWeight = FontWeight.Normal
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            ocrResult.paragraphs.forEachIndexed { index, paragraph ->
+                Surface(
+                    color = Color.White.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.2f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Surface(
+                            color = accentColor.copy(alpha = 0.2f),
+                            shape = CircleShape,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = "${index + 1}",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = deepTextColor
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = paragraph,
+                            fontSize = 14.sp,
+                            color = deepTextColor,
+                            lineHeight = 21.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

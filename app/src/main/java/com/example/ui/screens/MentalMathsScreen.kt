@@ -6,6 +6,7 @@ import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import android.speech.tts.TextToSpeech
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -36,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
@@ -98,13 +100,13 @@ fun MentalMathsScreen(
     val books = listOf(
         MathBook(
             id = "addition",
-            title = "கூட்டல் 500 எளிய வழிகள்",
+            title = "100 Easy Additional Steps",
             subtitle = "Speed Addition Tricks & Vedic Methods",
             category = "கூட்டல்",
             totalTricks = "500 வழிகள்",
             assetFileName = "addition_500.pdf",
             accentColor = SubikshaSkyBlue,
-            imageDrawableRes = R.drawable.card_gemini_chat,
+            imageDrawableRes = R.drawable.card_mental_maths,
             description = "விரல் விட்டு எண்ணாமல் மனதிலேயே நொடியில் 2 மற்றும் 3 இலக்க எண்களைக் கூட்டும் அற்புத உத்திகள்."
         ),
         MathBook(
@@ -115,7 +117,7 @@ fun MentalMathsScreen(
             totalTricks = "500 வழிகள்",
             assetFileName = "addition_500.pdf", // Graceful fallback
             accentColor = SubikshaMintGreen,
-            imageDrawableRes = R.drawable.card_image_to_text,
+            imageDrawableRes = R.drawable.card_mental_maths,
             description = "கடன் வாங்காமல் மனக்கணக்காகவே பெரிய எண்களை எளிதில் கழிக்கும் எளிய கணித வித்தைகள்."
         ),
         MathBook(
@@ -126,7 +128,7 @@ fun MentalMathsScreen(
             totalTricks = "500 வழிகள்",
             assetFileName = "addition_500.pdf", // Graceful fallback
             accentColor = SubikshaWarmOrange,
-            imageDrawableRes = R.drawable.card_spoken_english,
+            imageDrawableRes = R.drawable.card_mental_maths,
             description = "வாய்ப்பாடுகளை மனப்பாடம் செய்யாமல் குறுக்கு பெருக்கல் முறையில் நொடியில் விடை காணும் வழிகள்."
         ),
         MathBook(
@@ -137,7 +139,7 @@ fun MentalMathsScreen(
             totalTricks = "500 வழிகள்",
             assetFileName = "division_500.pdf",
             accentColor = SubikshaPink,
-            imageDrawableRes = R.drawable.card_voice_chat,
+            imageDrawableRes = R.drawable.card_mental_maths,
             description = "மீதியில்லா வகுத்தல் மற்றும் பெரிய எண்களை நொடிகளில் சுருக்கும் மனக்கணித யுக்திகள்."
         )
     )
@@ -194,7 +196,7 @@ fun MentalMathsLibraryScreen(
                 )
             )
     ) {
-        // Ultra Deluxe Gradient Header (Matching Home Page)
+        // Sleek Gradient Header with perfectly aligned Avatar & Heading
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -204,211 +206,194 @@ fun MentalMathsLibraryScreen(
                     )
                 )
                 .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(horizontal = 16.dp, vertical = 10.dp)
         ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Elevated White Circular Back Button
+                Surface(
+                    shape = CircleShape,
+                    color = Color.White,
+                    shadowElevation = 3.dp,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .testTag("maths_back_button")
                 ) {
-                    // Elevated White Circular Back Button (Matching Home)
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.White,
-                        shadowElevation = 4.dp,
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = SubikshaNavy,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                // Center Teacher Avatar & Title Info (No line breaks, crisp single line)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 10.dp)
+                ) {
+                    Box(
                         modifier = Modifier
-                            .size(42.dp)
-                            .testTag("maths_back_button")
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White)
+                            .border(2.dp, SubikshaPastelPurple, CircleShape),
+                        contentAlignment = Alignment.Center
                     ) {
-                        IconButton(onClick = onBackClick) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = SubikshaNavy,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
+                        Image(
+                            painter = painterResource(id = R.drawable.teacher_avatar),
+                            contentDescription = "Subiksha Teacher Avatar",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
                     }
 
-                    // Center Teacher Avatar & Title Info
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "மனக்கணக்கு நூலகம்",
+                                color = Color.White,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(SubikshaMintGreen)
+                            )
+                        }
+                        Text(
+                            text = "Mental Maths • 500 எளிய வழிகள்",
+                            color = Color(0xFFE2E8F0),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                // Right Audio Voice Badge
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color.White.copy(alpha = 0.2f),
+                    modifier = Modifier.height(32.dp)
+                ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(horizontal = 10.dp)
+                        modifier = Modifier.padding(horizontal = 8.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(CircleShape)
-                                .background(Color.White)
-                                .border(2.dp, SubikshaPastelPurple, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.teacher_avatar),
-                                contentDescription = "Subiksha Teacher Avatar",
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(10.dp))
-
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "மனக்கணக்கு நூலகம்",
-                                    color = Color.White,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .size(7.dp)
-                                        .clip(CircleShape)
-                                        .background(SubikshaMintGreen)
-                                )
-                            }
-                            Text(
-                                text = "Mental Maths • 500 எளிய வழிகள்",
-                                color = Color(0xFFE2E8F0),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Normal
-                            )
-                        }
-                    }
-
-                    // Right Badge
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = Color.White.copy(alpha = 0.2f),
-                        modifier = Modifier.height(34.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 10.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.VolumeUp,
-                                contentDescription = "Audio Voice Guide",
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "பெண் குரல் 🔊",
-                                color = Color.White,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.VolumeUp,
+                            contentDescription = "Voice Guide",
+                            tint = Color.White,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "குரல் 🔊",
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
         }
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 90.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        // Main No-Scroll Body Area: All 4 Categories visible together in one screen
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Natural Realistic Hero Card (Matching Home Welcome Banner)
-            item {
-                Card(
-                    shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Box(
+            // Category Tabs Row: Fits All 5 Options (அனைத்தும், கூட்டல், கழித்தல், பெருக்கல், வகுத்தல்) without scroll
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                categories.forEach { category ->
+                    val isSelected = category == selectedCategory
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) SubikshaRoyalPurple else Color.White,
+                        border = BorderStroke(1.dp, if (isSelected) SubikshaRoyalPurple else Color(0xFFE2E8F0)),
+                        shadowElevation = if (isSelected) 2.dp else 1.dp,
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(130.dp)
+                            .weight(1f)
+                            .height(34.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onCategorySelect(category) }
+                            .testTag("category_tab_$category")
                     ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.welcome_card),
-                            contentDescription = "Mental Maths Banner",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                        // Gradient Overlay
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.horizontalGradient(
-                                        colors = listOf(
-                                            SubikshaNavy.copy(alpha = 0.85f),
-                                            Color.Transparent
-                                        )
-                                    )
-                                )
-                                .padding(16.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier.fillMaxHeight(),
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Surface(
-                                    color = SubikshaPink,
-                                    shape = RoundedCornerShape(6.dp)
-                                ) {
-                                    Text(
-                                        text = "ULTRA DELUXE MATHS",
-                                        color = Color.White,
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "மூளைக்கு சுறுசுறுப்புப் பயிற்சி",
-                                    color = Color.White,
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.ExtraBold
-                                )
-                                Text(
-                                    text = "500 எளிய வழிகளுடன் கூடிய விரிவான PDF கையேடு",
-                                    color = Color(0xFFF1F5F9),
-                                    fontSize = 11.sp
-                                )
-                            }
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = category,
+                                color = if (isSelected) Color.White else SubikshaNavy,
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                maxLines = 1,
+                                textAlign = TextAlign.Center
+                            )
                         }
                     }
                 }
             }
 
-            // Natural Realistic Tabs / Category Pills
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    categories.forEach { category ->
-                        val isSelected = category == selectedCategory
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = if (isSelected) SubikshaRoyalPurple else Color.White,
-                            shadowElevation = if (isSelected) 3.dp else 1.dp,
+            // 4 Equal-sized Course Cards (One by one rows) filling the remaining screen
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                filteredBooks.forEach { book ->
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .clickable { onBookSelect(book) }
+                            .testTag("math_book_${book.id}")
+                    ) {
+                        Row(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(14.dp))
-                                .clickable { onCategorySelect(category) }
-                                .testTag("category_tab_$category")
+                                .fillMaxSize()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                            // Rounded Category Icon Box
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(book.accentColor.copy(alpha = 0.14f)),
+                                contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = when (category) {
+                                    imageVector = when (book.category) {
                                         "கூட்டல்" -> Icons.Default.Add
                                         "கழித்தல்" -> Icons.Default.Remove
                                         "பெருக்கல்" -> Icons.Default.Close
@@ -416,115 +401,67 @@ fun MentalMathsLibraryScreen(
                                         else -> Icons.Default.Calculate
                                     },
                                     contentDescription = null,
-                                    tint = if (isSelected) Color.White else SubikshaNavy,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = category,
-                                    color = if (isSelected) Color.White else SubikshaNavy,
-                                    fontSize = 12.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Book Cards with Realistic Image & Details
-            items(filteredBooks) { book ->
-                Card(
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onBookSelect(book) }
-                        .testTag("math_book_${book.id}")
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        // Realistic Image Header for Card
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(120.dp)
-                        ) {
-                            Image(
-                                painter = painterResource(id = book.imageDrawableRes),
-                                contentDescription = book.title,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                            // Badge Overlay
-                            Surface(
-                                color = book.accentColor,
-                                shape = RoundedCornerShape(bottomStart = 12.dp),
-                                modifier = Modifier.align(Alignment.TopEnd)
-                            ) {
-                                Text(
-                                    text = book.totalTricks,
-                                    color = Color.White,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
-
-                        // Content Row
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(book.accentColor.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.MenuBook,
-                                    contentDescription = null,
                                     tint = book.accentColor,
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
 
-                            Spacer(modifier = Modifier.width(14.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
 
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = book.title,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = SubikshaNavy
-                                )
-                                Text(
-                                    text = book.subtitle,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = SubikshaRoyalPurple
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = book.title,
+                                        fontSize = 14.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = SubikshaNavy,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f, fill = false)
+                                    )
+
+                                    Spacer(modifier = Modifier.width(6.dp))
+
+                                    Surface(
+                                        color = book.accentColor.copy(alpha = 0.12f),
+                                        shape = RoundedCornerShape(6.dp),
+                                        border = BorderStroke(1.dp, book.accentColor.copy(alpha = 0.25f))
+                                    ) {
+                                        Text(
+                                            text = book.totalTricks,
+                                            color = book.accentColor,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(2.dp))
+
                                 Text(
                                     text = book.description,
-                                    fontSize = 12.sp,
+                                    fontSize = 11.5.sp,
                                     color = SubikshaTextMuted,
-                                    lineHeight = 16.sp
+                                    lineHeight = 15.sp,
+                                    maxLines = 2,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                 )
                             }
 
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
 
+                            // Open Button
                             Button(
                                 onClick = { onBookSelect(book) },
                                 colors = ButtonDefaults.buttonColors(containerColor = book.accentColor),
                                 shape = RoundedCornerShape(10.dp),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                modifier = Modifier.height(34.dp)
                             ) {
                                 Text("திறக்க", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
@@ -532,6 +469,8 @@ fun MentalMathsLibraryScreen(
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(10.dp))
         }
     }
 }

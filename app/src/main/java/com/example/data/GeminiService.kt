@@ -15,7 +15,16 @@ import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.TimeUnit
 
-class DefaultQuotaExceededException(message: String) : Exception(message)
+data class ChatMessage(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val text: String,
+    val isUser: Boolean,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+class DefaultQuotaExceededException(
+    message: String = "Default API quota முடிந்தது, App இல் API key store செய்யப்படவில்லை எனவே key யை ADD செய்யவும்"
+) : Exception(message)
 
 class GeminiService(private val apiKeyManager: ApiKeyManager) {
 
@@ -38,8 +47,8 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
             )
         }
 
-        // Reliable flash models
-        val models = listOf("gemini-3.5-flash", "gemini-flash-latest", "gemini-3.8-flash")
+        // Reliable 3.x models for conversation
+        val models = listOf("gemini-3-flash-preview", "gemini-3.1-flash-lite")
         for (model in models) {
             val attempt = callGeminiApi(model, apiKey, conversation, customPrompt)
             if (attempt.isSuccess) {
@@ -48,6 +57,99 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
         }
 
         return@withContext Result.failure(Exception("AI ஆசிரியர் பதில் அளிக்க முடியவில்லை. தயவுசெய்து மீண்டும் முயற்சிக்கவும்."))
+    }
+
+    private fun isQuotaError(msg: String): Boolean {
+        val lower = msg.lowercase()
+        return lower.contains("429") ||
+                lower.contains("quota") ||
+                lower.contains("resource_exhausted") ||
+                lower.contains("rate limit") ||
+                lower.contains("too many requests")
+    }
+
+    /**
+     * Direct Multimodal Vision API call for Textbook / Worksheet Analysis:
+     * - Uses dual key failover: Key 1 -> Key 2 (Rollback Key) -> Key 1
+     * - Specifically enabled ONLY for Image-to-Text OCR feature
+     * - Uses models: gemini-3-flash-preview, gemini-3.1-flash-lite
+     */
+    suspend fun analyzeBookImageDirect(
+        bitmap: Bitmap
+    ): Result<OcrResult> = withContext(Dispatchers.IO) {
+        val userKey = apiKeyManager.getUserCustomKey().trim()
+        val key1 = if (userKey.isNotBlank()) userKey else apiKeyManager.getDefaultApiKey().trim()
+        val key2 = apiKeyManager.getRollbackApiKey().trim()
+
+        val models = listOf("gemini-3-flash-preview", "gemini-3.1-flash-lite")
+
+        // 1. Try Key 1 (Primary Key)
+        var key1QuotaExhausted = false
+        var lastErrorMsg = ""
+
+        if (key1.isNotBlank()) {
+            for (model in models) {
+                val attempt = callGeminiVisionApiDirect(model, key1, bitmap)
+                if (attempt.isSuccess) {
+                    return@withContext attempt
+                }
+                val errMsg = attempt.exceptionOrNull()?.message.orEmpty()
+                lastErrorMsg = errMsg
+                if (isQuotaError(errMsg)) {
+                    key1QuotaExhausted = true
+                    break
+                }
+            }
+        }
+
+        // 2. If Key 1 quota exhausted (or Key 1 empty), switch to Key 2 (Rollback Key)
+        var key2QuotaExhausted = false
+        if (key2.isNotBlank() && key2 != key1) {
+            for (model in models) {
+                val attempt = callGeminiVisionApiDirect(model, key2, bitmap)
+                if (attempt.isSuccess) {
+                    return@withContext attempt
+                }
+                val errMsg = attempt.exceptionOrNull()?.message.orEmpty()
+                lastErrorMsg = errMsg
+                if (isQuotaError(errMsg)) {
+                    key2QuotaExhausted = true
+                    break
+                }
+            }
+        }
+
+        // 3. If Key 2 quota also exhausted, try Key 1 again (Round-robin Retry)
+        if (key2QuotaExhausted && key1.isNotBlank()) {
+            for (model in models) {
+                val attempt = callGeminiVisionApiDirect(model, key1, bitmap)
+                if (attempt.isSuccess) {
+                    return@withContext attempt
+                }
+                lastErrorMsg = attempt.exceptionOrNull()?.message.orEmpty()
+            }
+        }
+
+        if (lastErrorMsg.isNotBlank()) {
+            if (isQuotaError(lastErrorMsg)) {
+                return@withContext Result.failure(
+                    DefaultQuotaExceededException("API Quota வரம்பு முடிந்தது. சிறிது நேரம் கழித்து மீண்டும் முயற்சிக்கவும் அல்லது புதிய Key சேர்க்கவும்.")
+                )
+            }
+            return@withContext Result.failure(Exception("AI பிழை: $lastErrorMsg"))
+        }
+
+        return@withContext Result.failure(Exception("AI இணைப்பு தோல்வியடைந்தது. API Key-ஐ சரிபார்க்கவும்."))
+    }
+
+    /**
+     * Backward-compatible overload for analyzeBookImage
+     */
+    suspend fun analyzeBookImage(
+        bitmap: Bitmap,
+        ocrExtractedText: String = ""
+    ): Result<OcrResult> {
+        return analyzeBookImageDirect(bitmap)
     }
 
     private fun callGeminiApi(
@@ -137,47 +239,7 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
         }
     }
 
-    /**
-     * Direct Multimodal Vision API call for Textbook / Worksheet Analysis:
-     * - Uses user-specified key directly with fallback to user custom key
-     * - Supports gemini-3.5-flash, gemini-flash-latest, and gemini-3.8-flash
-     * - Sends both query key param and X-goog-api-key header for maximum compatibility
-     */
-    suspend fun analyzeBookImageDirect(
-        bitmap: Bitmap
-    ): Result<OcrResult> = withContext(Dispatchers.IO) {
-        val userKey = apiKeyManager.getUserCustomKey().trim()
-        val defaultKey = apiKeyManager.getDefaultApiKey().trim()
 
-        val models = listOf("gemini-3.5-flash", "gemini-flash-latest", "gemini-3.8-flash")
-        
-        // 1. Try with user custom key first if user added one!
-        if (userKey.isNotBlank()) {
-            for (model in models) {
-                val userAttempt = callGeminiVisionApiDirect(model, userKey, bitmap)
-                if (userAttempt.isSuccess) {
-                    return@withContext userAttempt
-                }
-            }
-        }
-
-        // 2. Try with default key
-        if (defaultKey.isNotBlank()) {
-            var lastErrMsg = ""
-            for (model in models) {
-                val attempt = callGeminiVisionApiDirect(model, defaultKey, bitmap)
-                if (attempt.isSuccess) {
-                    return@withContext attempt
-                }
-                lastErrMsg = attempt.exceptionOrNull()?.message.orEmpty()
-            }
-            if (lastErrMsg.isNotBlank()) {
-                return@withContext Result.failure(Exception("AI பிழை: $lastErrMsg"))
-            }
-        }
-
-        return@withContext Result.failure(Exception("AI இணைப்பு தோல்வியடைந்தது. API Key-ஐ சரிபார்க்கவும்."))
-    }
 
     private fun callGeminiVisionApiDirect(
         modelName: String,

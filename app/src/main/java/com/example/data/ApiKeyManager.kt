@@ -9,20 +9,35 @@ class ApiKeyManager(context: Context) {
         context.getSharedPreferences("subiksha_teacher_prefs", Context.MODE_PRIVATE)
 
     companion object {
-        // Built-in working default Gemini API Key
+        // Built-in working default Gemini API Key 1
         // Dynamically assembled at runtime to protect token integrity
-        private val KEY_CODES = intArrayOf(
+        private val KEY1_CODES = intArrayOf(
             68, 84, 49, 68, 101, 59, 85, 81, 57, 77, 103, 117, 59, 109, 107, 90, 71, 48, 59, 93, 118, 82, 115, 54, 108, 102, 93, 90, 77, 69, 70, 90, 80, 104, 58, 81, 83, 122, 93, 74, 114, 121, 70, 112, 125, 77, 82, 70, 81, 76, 100, 98, 122
         )
+        // Built-in rollback Gemini API Key 2
+        private val KEY2_CODES = intArrayOf(
+            68, 84, 49, 68, 101, 59, 85, 81, 57, 77, 69, 93, 55, 112, 83, 52, 80, 55, 78, 106, 74, 70, 71, 106, 107, 68, 109, 90, 80, 84, 87, 122, 82, 85, 98, 101, 74, 104, 82, 85, 76, 55, 98, 98, 77, 106, 85, 115, 68, 68, 100, 77, 84
+        )
 
-        fun getBuiltinKey(): String {
+        fun getBuiltinKey1(): String {
             return try {
-                val chars = CharArray(KEY_CODES.size) { i -> (KEY_CODES[i] - 3).toChar() }
+                val chars = CharArray(KEY1_CODES.size) { i -> (KEY1_CODES[i] - 3).toChar() }
                 String(chars)
             } catch (_: Exception) {
                 ""
             }
         }
+
+        fun getBuiltinKey2(): String {
+            return try {
+                val chars = CharArray(KEY2_CODES.size) { i -> (KEY2_CODES[i] - 3).toChar() }
+                String(chars)
+            } catch (_: Exception) {
+                ""
+            }
+        }
+
+        fun getBuiltinKey(): String = getBuiltinKey1()
     }
 
     // Default Gemini API Key from code or BuildConfig
@@ -35,7 +50,12 @@ class ApiKeyManager(context: Context) {
         if (buildKey.isNotEmpty() && buildKey != "MY_GEMINI_API_KEY" && buildKey != "\"\"") {
             return buildKey
         }
-        return getBuiltinKey()
+        return getBuiltinKey1()
+    }
+
+    // Rollback Gemini API Key 2 for fallback
+    fun getRollbackApiKey(): String {
+        return getBuiltinKey2()
     }
 
     // User's custom API Key stored in App preferences

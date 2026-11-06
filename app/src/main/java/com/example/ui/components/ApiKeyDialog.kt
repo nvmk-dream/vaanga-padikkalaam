@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -30,8 +31,9 @@ fun ApiKeyDialog(
 ) {
     val context = LocalContext.current
     val apiKeyManager = remember { ApiKeyManager(context) }
-    var keyText by remember { mutableStateOf(apiKeyManager.getApiKey()) }
+    var keyText by remember { mutableStateOf(apiKeyManager.getUserCustomKey()) }
     var passwordVisible by remember { mutableStateOf(false) }
+    val isCustomKey = apiKeyManager.isCustomKey()
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -64,14 +66,18 @@ fun ApiKeyDialog(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "Gemini API Key அமைத்தல்",
+                    text = "Gemini AI Key அமைப்புகள்",
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
                     color = SubikshaNavy
                 )
 
                 Text(
-                    text = "Google AI Studio API Key-ஐ இங்கே உள்ளிடவும். இது உங்கள் சாதனத்தில் மட்டுமே பாதுகாப்பாகச் சேமிக்கப்படும்.",
+                    text = if (isCustomKey) {
+                        "தற்போது நீங்கள் உள்ளிட்ட தனிப்பட்ட API Key இயங்குகிறது. விருப்பப்பட்டால் Rollback செய்து Default Key-க்கு மாறலாம்."
+                    } else {
+                        "ஆப்பில் Built-in Default Key இயங்குகிறது! உங்களிடம் சொந்த Gemini Key இருந்தால் இங்கே உள்ளிடலாம்."
+                    },
                     fontSize = 12.sp,
                     color = SubikshaTextMuted,
                     modifier = Modifier.padding(top = 4.dp, bottom = 14.dp)
@@ -80,8 +86,8 @@ fun ApiKeyDialog(
                 OutlinedTextField(
                     value = keyText,
                     onValueChange = { keyText = it },
-                    label = { Text("API Key") },
-                    placeholder = { Text("AIzaSy...") },
+                    label = { Text("தனிப்பட்ட API Key (Custom Key)") },
+                    placeholder = { Text("AIzaSy... (காலியாக விட்டால் Default Key)") },
                     singleLine = true,
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
@@ -99,7 +105,31 @@ fun ApiKeyDialog(
                     shape = RoundedCornerShape(12.dp)
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
+
+                if (isCustomKey) {
+                    OutlinedButton(
+                        onClick = {
+                            apiKeyManager.rollbackToDefaultApiKey()
+                            keyText = ""
+                            onKeySaved()
+                            onDismiss()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFDC2626)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.RestartAlt,
+                            contentDescription = "Rollback",
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Rollback: Default Key-க்கு மாற்று")
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -115,7 +145,11 @@ fun ApiKeyDialog(
 
                     Button(
                         onClick = {
-                            apiKeyManager.saveApiKey(keyText)
+                            if (keyText.isNotBlank()) {
+                                apiKeyManager.saveApiKey(keyText)
+                            } else {
+                                apiKeyManager.rollbackToDefaultApiKey()
+                            }
                             onKeySaved()
                             onDismiss()
                         },

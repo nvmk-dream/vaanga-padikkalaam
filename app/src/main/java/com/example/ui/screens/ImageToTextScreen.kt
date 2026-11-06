@@ -93,26 +93,20 @@ fun ImageToTextScreen(
     var editedText by remember { mutableStateOf(ocrResult.rawEnglishText) }
     var hasValidKey by remember { mutableStateOf(apiKeyManager.getApiKey().isNotBlank()) }
 
-    // Theme palette matching User Technical Spec
+    // Theme palette matching User Technical Spec & CSS
     val mauveHeader = Color(0xFF7D405D)
-    val roseGoldAccent = Color(0xFFB25B7B)
+    val roseGoldAccent = Color(0xFFB45B80) // CSS: #b45b80 for active tab
     val mauveDeep = Color(0xFF633249)
     val buttonGradient = Brush.linearGradient(
-        colors = listOf(Color(0xFF8A4867), Color(0xFF633249))
+        colors = listOf(Color(0xFF85405F), Color(0xFF71334F)) // CSS: linear-gradient(135deg, #85405f, #71334f)
     )
-    val glassCardBackground = Color(0xFFFFF9FA).copy(alpha = 0.88f)
-    val glassBorder = BorderStroke(1.dp, Color.White.copy(alpha = 0.65f))
-    val deepTextColor = Color(0xFF3B1E2B)
-    val mutedTextColor = Color(0xFF6B4D5B)
+    val glassCardBackground = Color.White.copy(alpha = 0.10f) // CSS: rgba(255, 255, 255, 0.10)
+    val glassBorder = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)) // CSS: 1.5px solid rgba(255,255,255,0.20)
+    val deepTextColor = Color(0xFF2E1A23)
+    val mutedTextColor = Color(0xFF5A3A4A)
 
-    // Dynamic background based on active page / tab:
-    // Tab "உரை" (EXTRACTED_TEXT) uses School Supplies Theme (Image 1 style)
-    // Sub-pages ("முக்கிய", "விளக்கம்", "தமிழில்") use Pink Feathers Theme (Image 2 style)
-    val backgroundRes = if (selectedTab == OcrTab.EXTRACTED_TEXT) {
-        R.drawable.bg_school_supplies
-    } else {
-        R.drawable.bg_pink_feathers
-    }
+    // Attached image fixed screen background (School Supplies theme)
+    val backgroundRes = R.drawable.bg_school_supplies
 
     // Text to Speech
     var ttsEngine by remember { mutableStateOf<TextToSpeech?>(null) }
@@ -451,15 +445,15 @@ fun ImageToTextScreen(
                         )
                     }
 
-                    // Tab Content Glassmorphism Card
+                    // Tab Content Glassmorphism Card (.result-card)
                     item {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .shadow(8.dp, RoundedCornerShape(22.dp), ambientColor = Color(0x227D405D))
-                                .border(glassBorder, RoundedCornerShape(22.dp)),
+                                .shadow(6.dp, RoundedCornerShape(32.dp), ambientColor = Color(0x1A50323C))
+                                .border(glassBorder, RoundedCornerShape(32.dp)),
                             colors = CardDefaults.cardColors(containerColor = glassCardBackground),
-                            shape = RoundedCornerShape(22.dp)
+                            shape = RoundedCornerShape(32.dp)
                         ) {
                             Box(modifier = Modifier.padding(18.dp)) {
                                 when (selectedTab) {
@@ -538,10 +532,11 @@ fun ImageToTextScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp)
-                            .shadow(6.dp, RoundedCornerShape(26.dp))
-                            .clip(RoundedCornerShape(26.dp))
+                            .shadow(5.dp, RoundedCornerShape(50.dp), ambientColor = Color(0x1A642841))
+                            .clip(RoundedCornerShape(50.dp))
                             .background(buttonGradient)
                             .testTag("ocr_bottom_action_btn"),
+                        shape = RoundedCornerShape(50.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color.Transparent
                         )
@@ -703,9 +698,9 @@ private fun ScannerEngineSwitch(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color.White.copy(alpha = 0.85f))
-            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.9f)), RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(28.dp))
+            .background(Color.White.copy(alpha = 0.10f))
+            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.20f)), RoundedCornerShape(28.dp))
             .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
@@ -714,7 +709,7 @@ private fun ScannerEngineSwitch(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(22.dp))
                     .background(
                         if (isSelected) buttonGradient else Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
                     )
@@ -731,7 +726,7 @@ private fun ScannerEngineSwitch(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Surface(
-                        color = if (isSelected) Color.White.copy(alpha = 0.25f) else mauveHeader.copy(alpha = 0.12f),
+                        color = if (isSelected) Color.White.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.10f),
                         shape = RoundedCornerShape(6.dp)
                     ) {
                         Text(
@@ -762,10 +757,10 @@ private fun BookImagePreviewCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(8.dp, RoundedCornerShape(22.dp), ambientColor = Color(0x227D405D))
-            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.75f)), RoundedCornerShape(22.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.88f)),
-        shape = RoundedCornerShape(22.dp)
+            .shadow(6.dp, RoundedCornerShape(32.dp), ambientColor = Color(0x1A50323C))
+            .border(BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)), RoundedCornerShape(32.dp)),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.10f)),
+        shape = RoundedCornerShape(32.dp)
     ) {
         Column(
             modifier = Modifier
@@ -776,9 +771,9 @@ private fun BookImagePreviewCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 190.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFFFFFBF7))
-                    .border(BorderStroke(1.dp, Color(0xFFE8DFD8)), RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(Color.White.copy(alpha = 0.10f))
+                    .border(BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)), RoundedCornerShape(28.dp))
                     .padding(16.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -801,7 +796,7 @@ private fun BookImagePreviewCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 180.dp, max = 260.dp)
-                            .clip(RoundedCornerShape(10.dp)),
+                            .clip(RoundedCornerShape(16.dp)),
                         contentScale = ContentScale.Fit
                     )
                 } else {
@@ -822,7 +817,7 @@ private fun BookImagePreviewCard(
                                 text = paragraph,
                                 fontSize = 14.sp,
                                 fontFamily = FontFamily.Serif,
-                                color = deepTextColor.copy(alpha = 0.85f),
+                                color = deepTextColor.copy(alpha = 0.90f),
                                 lineHeight = 20.sp,
                                 modifier = Modifier.padding(vertical = 3.dp)
                             )
@@ -858,9 +853,11 @@ private fun BookImagePreviewCard(
                         onClick = onCameraClick,
                         modifier = Modifier
                             .height(38.dp)
-                            .clip(RoundedCornerShape(20.dp))
+                            .shadow(5.dp, RoundedCornerShape(50.dp), ambientColor = Color(0x1A642841))
+                            .clip(RoundedCornerShape(50.dp))
                             .background(buttonGradient)
                             .testTag("ocr_camera_btn"),
+                        shape = RoundedCornerShape(50.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                     ) {
@@ -878,9 +875,11 @@ private fun BookImagePreviewCard(
                         onClick = onGalleryClick,
                         modifier = Modifier
                             .height(38.dp)
-                            .clip(RoundedCornerShape(20.dp))
+                            .shadow(5.dp, RoundedCornerShape(50.dp), ambientColor = Color(0x1A642841))
+                            .clip(RoundedCornerShape(50.dp))
                             .background(buttonGradient)
                             .testTag("ocr_gallery_btn"),
+                        shape = RoundedCornerShape(50.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                     ) {
@@ -909,9 +908,9 @@ private fun OcrTabsRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color.White.copy(alpha = 0.75f))
-            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.85f)), RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(28.dp))
+            .background(Color.White.copy(alpha = 0.10f))
+            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.20f)), RoundedCornerShape(28.dp))
             .padding(4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -920,9 +919,9 @@ private fun OcrTabsRow(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(22.dp))
                     .background(
-                        if (isSelected) activeColor else Color.Transparent
+                        if (isSelected) Color(0xFFB45B80) else Color.Transparent
                     )
                     .clickable { onTabSelected(tab) }
                     .padding(vertical = 10.dp),
@@ -1016,9 +1015,9 @@ private fun ExtractedTextTabContent(
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             ocrResult.paragraphs.forEachIndexed { index, paragraph ->
                 Surface(
-                    color = Color.White.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.2f)),
+                    color = Color.White.copy(alpha = 0.10f),
+                    shape = RoundedCornerShape(28.dp),
+                    border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -1121,9 +1120,9 @@ private fun KeyWordsTabContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 6.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color.White.copy(alpha = 0.9f))
-                    .border(BorderStroke(1.dp, Color(0xFFF3E8EE)), RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(Color.White.copy(alpha = 0.10f))
+                    .border(BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)), RoundedCornerShape(28.dp))
                     .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -1267,9 +1266,9 @@ private fun ExplanationTabContent(
 
         explanation.paragraphsExplanation.forEach { item ->
             Surface(
-                color = Color.White.copy(alpha = 0.85f),
-                shape = RoundedCornerShape(10.dp),
-                border = BorderStroke(1.dp, Color(0xFFF3E8EE)),
+                color = Color.White.copy(alpha = 0.10f),
+                shape = RoundedCornerShape(28.dp),
+                border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 3.dp)
@@ -1279,7 +1278,7 @@ private fun ExplanationTabContent(
                     fontSize = 13.sp,
                     color = deepTextColor,
                     lineHeight = 19.sp,
-                    modifier = Modifier.padding(10.dp)
+                    modifier = Modifier.padding(14.dp)
                 )
             }
         }
@@ -1288,12 +1287,12 @@ private fun ExplanationTabContent(
 
         // Practical Application
         Surface(
-            color = Color(0xFFFAF5F8),
-            shape = RoundedCornerShape(12.dp),
-            border = BorderStroke(1.dp, accentColor.copy(alpha = 0.2f)),
+            color = Color.White.copy(alpha = 0.10f),
+            shape = RoundedCornerShape(28.dp),
+            border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
+            Column(modifier = Modifier.padding(14.dp)) {
                 Text(
                     text = "🌱 அன்றாட வாழ்வில் பயன்பாடு:",
                     fontSize = 12.sp,
@@ -1365,9 +1364,9 @@ private fun TamilTranslationTabContent(
         )
 
         Surface(
-            color = Color.White.copy(alpha = 0.85f),
-            shape = RoundedCornerShape(12.dp),
-            border = BorderStroke(1.dp, Color(0xFFF3E8EE)),
+            color = Color.White.copy(alpha = 0.10f),
+            shape = RoundedCornerShape(28.dp),
+            border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(

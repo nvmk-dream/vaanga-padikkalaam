@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
@@ -33,21 +35,44 @@ fun HomeScreen(
     onKeyClick: () -> Unit = {}
 ) {
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(SubikshaBackground)
+        modifier = Modifier.fillMaxSize()
     ) {
+        // Layer 1: Background wallpaper with stars and hearts (Image 2)
+        Image(
+            painter = painterResource(id = R.drawable.bg_home),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+
+        // Semi-transparent overlay to ensure cards and text contrast
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.15f),
+                            Color(0xFFFFF0F5).copy(alpha = 0.25f)
+                        )
+                    )
+                )
+        )
+
+        // Layer 2: Foreground interactive content
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 90.dp),
+            contentPadding = PaddingValues(bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Top Header Banner with status bar padding and interactive hamburger / profile targets
+            // Top Header Banner shifted down to avoid status bar clipping and aligned horizontally with cards
             item {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
+                        .padding(top = 10.dp, start = 16.dp, end = 16.dp)
+                        .clip(RoundedCornerShape(20.dp))
                 ) {
                     Image(
                         painter = painterResource(id = R.drawable.header_banner),
@@ -58,11 +83,12 @@ fun HomeScreen(
                         contentScale = ContentScale.FillWidth
                     )
 
-                    // Hamburger Menu button overlay (aligned with left circular button on banner)
+                    // Hamburger Menu button overlay (centered on the left circular icon on banner)
                     IconButton(
                         onClick = onMenuClick,
                         modifier = Modifier
-                            .padding(start = 8.dp, top = 4.dp)
+                            .align(Alignment.CenterStart)
+                            .padding(start = 6.dp)
                             .size(46.dp)
                             .testTag("hamburger_menu_button")
                     ) {
@@ -74,11 +100,11 @@ fun HomeScreen(
                         )
                     }
 
-                    // Profile Avatar clickable overlay (aligned with teacher avatar on top right of banner)
+                    // Profile Avatar clickable overlay (centered on teacher avatar on top right of banner)
                     Box(
                         modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(end = 12.dp, top = 4.dp)
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 6.dp)
                             .size(46.dp)
                             .clip(CircleShape)
                             .clickable { onProfileClick() }
@@ -274,6 +300,29 @@ fun HomeScreen(
                             onClick = { onNavigate("my_library") }
                         )
                     }
+                }
+            }
+
+            // Kids Reading & Flowers Layer filling the empty space (red box area)
+            item {
+                Card(
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.88f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.75f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.kids_reading_banner),
+                        contentDescription = "Students Learning together",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp)
+                            .clip(RoundedCornerShape(22.dp)),
+                        contentScale = ContentScale.Crop
+                    )
                 }
             }
         }

@@ -184,7 +184,15 @@ fun MentalMathsLibraryScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(SubikshaBackground)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFFF0FDF4),
+                        Color(0xFFDCFCE7),
+                        Color(0xFFF7FEE7)
+                    )
+                )
+            )
     ) {
         // Ultra Deluxe Gradient Header (Matching Home Page)
         Box(

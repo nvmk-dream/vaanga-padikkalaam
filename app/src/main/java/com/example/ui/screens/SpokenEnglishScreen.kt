@@ -159,9 +159,18 @@ fun SpokenEnglishScreen(
     val selectedBook = SpokenEnglishRepository.books.find { it.id == selectedBookId }
     val selectedChapter = selectedBook?.chapters?.find { it.id == selectedChapterId }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = SubikshaBackground
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFFF0F9FF),
+                        Color(0xFFE0F2FE),
+                        Color(0xFFF8FAFC)
+                    )
+                )
+            )
     ) {
         when {
             // Level 3: Chapter Detail / Lesson Reader

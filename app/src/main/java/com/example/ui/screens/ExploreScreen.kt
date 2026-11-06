@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -34,7 +35,15 @@ fun ExploreScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(SubikshaBackground)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFFFFFBEB),
+                            Color(0xFFFEF3C7),
+                            Color(0xFFFFFDF5)
+                        )
+                    )
+                )
                 .padding(innerPadding),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 90.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)

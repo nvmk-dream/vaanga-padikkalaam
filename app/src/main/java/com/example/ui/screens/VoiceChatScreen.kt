@@ -263,14 +263,27 @@ fun VoiceChatScreen(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = bgDark
+        containerColor = Color.Transparent
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .statusBarsPadding()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF060D1A),
+                            Color(0xFF0A192F),
+                            Color(0xFF07101E)
+                        )
+                    )
+                )
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .statusBarsPadding()
+            ) {
             when (screenState) {
                 VoiceChatScreenState.HOME -> {
                     VoiceChatHomeScreen(
@@ -394,6 +407,7 @@ fun VoiceChatScreen(
                     )
                 }
             }
+        }
         }
     }
 

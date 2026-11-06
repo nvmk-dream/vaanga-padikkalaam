@@ -44,7 +44,15 @@ fun ProfileScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(SubikshaBackground)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFFFFF1F2),
+                            Color(0xFFFFE4E6),
+                            Color(0xFFFFF7F8)
+                        )
+                    )
+                )
                 .padding(innerPadding),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)

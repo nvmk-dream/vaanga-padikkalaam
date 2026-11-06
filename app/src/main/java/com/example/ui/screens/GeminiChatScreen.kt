@@ -67,7 +67,15 @@ fun GeminiChatScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(SubikshaBackground)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFFFAF5FF),
+                        Color(0xFFF3E8FF),
+                        Color(0xFFEDE9FE)
+                    )
+                )
+            )
     ) {
         // 1. ULTRA DELUXE TOP HEADER (Matching Home Page & Mental Maths aesthetic)
         Surface(

@@ -94,9 +94,18 @@ fun MyLibraryScreen(
         }
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = SubikshaBackground
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFFF7F5FF),
+                        Color(0xFFECE7FE),
+                        Color(0xFFF5F3FF)
+                    )
+                )
+            )
     ) {
         Column(
             modifier = Modifier
@@ -570,21 +579,29 @@ private fun FolderItemCard(
                 ) {
                     Text(
                         text = folder.nameTamil,
-                        fontSize = 16.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        color = SubikshaNavy
+                        color = SubikshaNavy,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
 
+                    Spacer(modifier = Modifier.width(8.dp))
+
                     Surface(
-                        color = folder.primaryColor.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(6.dp)
+                        color = folder.primaryColor.copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, folder.primaryColor.copy(alpha = 0.25f))
                     ) {
                         Text(
                             text = "$docCount புத்தகங்கள்",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = folder.primaryColor,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            maxLines = 1,
+                            softWrap = false,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
                 }

@@ -239,8 +239,8 @@ fun HomeScreen(
                     ) {
                         HomeGridCard(
                             drawableRes = R.drawable.card_gemini_chat,
-                            title = "Gemini Chat",
-                            description = "Ask questions & get instant help",
+                            title = "100 Easy Additional Steps",
+                            description = "Speed addition tricks & Vedic math steps",
                             testTag = "home_card_gemini_chat",
                             modifier = Modifier.weight(1f),
                             onClick = { onNavigate("gemini_chat") }

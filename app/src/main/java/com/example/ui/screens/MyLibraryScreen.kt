@@ -185,106 +185,76 @@ fun MyLibraryScreen(
 
             // Main Content Area
             if (selectedFolder == null) {
-                // 1. All 8 Subject Folders View
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                // No-Scroll Category View: 6 Subject Categories (தமிழ், English, Maths, Science, Social, Others)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Hero Banner Card
-                    item {
-                        Card(
+                    // Compact Header Strip (No oversized explanatory banner)
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color.White.copy(alpha = 0.9f),
+                        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                        shadowElevation = 2.dp,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .shadow(6.dp, RoundedCornerShape(20.dp)),
-                            shape = RoundedCornerShape(20.dp)
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(
-                                        Brush.linearGradient(
-                                            colors = listOf(
-                                                Color(0xFF0F172A),
-                                                Color(0xFF1E1B4B),
-                                                Color(0xFF312E81)
-                                            )
-                                        )
-                                    )
-                                    .padding(20.dp)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(text = "📚", fontSize = 16.sp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "பாட நூலகப் பிரிவுகள்",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = SubikshaNavy
+                                )
+                            }
+                            Surface(
+                                color = SubikshaPastelPurple.copy(alpha = 0.35f),
+                                shape = RoundedCornerShape(8.dp)
                             ) {
-                                Column {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Surface(
-                                            color = Color(0xFFF59E0B).copy(alpha = 0.2f),
-                                            shape = RoundedCornerShape(8.dp),
-                                            border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.6f))
-                                        ) {
-                                            Text(
-                                                text = "📚 உங்கள் புத்தகம்",
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color(0xFFFDE68A),
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                            )
-                                        }
-
-                                        Text(
-                                            text = "8 SUBJECT FOLDERS",
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.White.copy(alpha = 0.8f)
-                                        )
-                                    }
-
-                                    Spacer(modifier = Modifier.height(12.dp))
-
-                                    Text(
-                                        text = "உங்கள் பாடப் புத்தகங்கள் & PDF சேமிப்பகம்",
-                                        fontSize = 19.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White
-                                    )
-
-                                    Spacer(modifier = Modifier.height(6.dp))
-
-                                    Text(
-                                        text = "தமிழ், English, Maths, Science, Social, Spoken English, Mental Maths போன்ற பாட வாரியாக உங்கள் PDF மற்றும் படங்களைச் சேர்த்து எப்போது வேண்டுமானாலும் வாசியுங்கள்.",
-                                        fontSize = 12.sp,
-                                        color = Color(0xFFCBD5E1),
-                                        lineHeight = 17.sp
-                                    )
-                                }
+                                Text(
+                                    text = "6 பிரிவுகள்",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = SubikshaRoyalPurple,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
                             }
                         }
                     }
 
-                    item {
-                        Text(
-                            text = "பாடத் தொகுப்புகள் (Subject Folders)",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = SubikshaNavy,
-                            modifier = Modifier.padding(start = 4.dp, top = 4.dp)
-                        )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // 6 Categories rendered in single-column equal-height cards (one by one rows)
+                    // Perfectly sized to fit initial screen without scrolling across 360px - 432px devices
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        MyLibraryRepository.folders.forEach { folder ->
+                            CompactFolderRowCard(
+                                folder = folder,
+                                docCount = folder.documents.size,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f),
+                                onClick = { selectedFolderId = folder.id }
+                            )
+                        }
                     }
 
-                    // Folders Grid / List
-                    items(MyLibraryRepository.folders) { folder ->
-                        FolderItemCard(
-                            folder = folder,
-                            docCount = folder.documents.size,
-                            onClick = { selectedFolderId = folder.id }
-                        )
-                    }
-
-                    item {
-                        Spacer(modifier = Modifier.height(24.dp))
-                    }
+                    Spacer(modifier = Modifier.height(10.dp))
                 }
             } else {
                 // 2. Documents inside selected folder
@@ -520,6 +490,100 @@ fun MyLibraryScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+// ==============================================================
+// Compact Folder Row Card (Single Row, One by One, No-Scroll)
+// ==============================================================
+@Composable
+private fun CompactFolderRowCard(
+    folder: LibraryFolder,
+    docCount: Int,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .shadow(2.dp, RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(14.dp))
+            .clickable { onClick() }
+            .testTag("folder_card_${folder.id}"),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Icon Badge
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(folder.primaryColor, folder.secondaryColor)
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = folder.icon,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = folder.nameTamil,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = SubikshaNavy,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+                Text(
+                    text = folder.nameEnglish,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = folder.primaryColor,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Surface(
+                color = folder.primaryColor.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, folder.primaryColor.copy(alpha = 0.25f))
+            ) {
+                Text(
+                    text = "$docCount",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = folder.primaryColor,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(6.dp))
+
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = "Open",
+                tint = folder.primaryColor,
+                modifier = Modifier.size(16.dp)
+            )
         }
     }
 }

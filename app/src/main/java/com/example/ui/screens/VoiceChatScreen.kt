@@ -1113,17 +1113,36 @@ private fun VoiceChatSettingsScreen(
             }
         }
 
-        // Save Button
+        // Action Buttons: Horizontal Row with Cancel & Save
         item {
-            Button(
-                onClick = onSave,
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp)
-                    .clip(RoundedCornerShape(25.dp)),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7))
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("சேமி (Save Settings)", color = Color.White, fontWeight = FontWeight.Bold)
+                OutlinedButton(
+                    onClick = onBack,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp),
+                    shape = RoundedCornerShape(25.dp),
+                    border = BorderStroke(1.dp, cyanAccent.copy(alpha = 0.6f))
+                ) {
+                    Text("ரத்து செய்", color = cyanAccent, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
+
+                Button(
+                    onClick = onSave,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp)
+                        .clip(RoundedCornerShape(25.dp)),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7))
+                ) {
+                    Text("சேமி (Save)", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
             }
         }
     }

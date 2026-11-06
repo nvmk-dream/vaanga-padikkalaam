@@ -841,17 +841,23 @@ private fun BookImagePreviewCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (bitmap != null) "✓ தேர்ந்தெடுக்கப்பட்ட படம்" else "உதாரணப் பாடப் புத்தகம்",
-                    fontSize = 13.sp,
+                    text = if (bitmap != null) "✓ படம்" else "உதாரணப் புத்தகம்",
+                    fontSize = 12.sp,
                     color = mauveHeader,
                     fontStyle = FontStyle.Italic,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f, fill = false)
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Button(
                         onClick = onCameraClick,
                         modifier = Modifier
+                            .height(38.dp)
                             .clip(RoundedCornerShape(20.dp))
                             .background(buttonGradient)
                             .testTag("ocr_camera_btn"),
@@ -871,6 +877,7 @@ private fun BookImagePreviewCard(
                     Button(
                         onClick = onGalleryClick,
                         modifier = Modifier
+                            .height(38.dp)
                             .clip(RoundedCornerShape(20.dp))
                             .background(buttonGradient)
                             .testTag("ocr_gallery_btn"),

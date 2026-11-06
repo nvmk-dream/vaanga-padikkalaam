@@ -72,13 +72,13 @@ object MyLibraryRepository {
                 )
             ),
 
-            // 2. English
+            // 2. English (Includes Spoken English)
             LibraryFolder(
                 id = "english",
                 nameTamil = "English",
-                nameEnglish = "English Reader & Grammar",
-                description = "Prose, Poetry, Supplementary, Grammar Rules & Vocabulary notes.",
-                badge = "Grammar & Stories",
+                nameEnglish = "English Grammar & Spoken",
+                description = "Prose, Poetry, Supplementary, Grammar Rules & Spoken English 100 Sentences.",
+                badge = "Grammar & Spoken",
                 icon = Icons.Default.AutoStories,
                 primaryColor = Color(0xFF1D4ED8), // Royal Blue
                 secondaryColor = Color(0xFF3B82F6),
@@ -92,17 +92,27 @@ object MyLibraryRepository {
                         pageCount = 36,
                         sizeText = "3.1 MB",
                         textSnippet = "A noun is a word that names a person, place, thing, or idea."
+                    ),
+                    LibraryDocument(
+                        id = "spk_1",
+                        title = "Spoken English Daily 100 Sentences",
+                        subtitle = "தினசரி பயன்படுத்தும் 100 வாக்கியங்களின் முழுமையான அச்சுப் பிரதி",
+                        fileType = DocumentType.PDF,
+                        dateAdded = "26 Oct 2026",
+                        pageCount = 20,
+                        sizeText = "1.4 MB",
+                        textSnippet = "Daily English sentences with Tamil meanings and audio tips."
                     )
                 )
             ),
 
-            // 3. Maths (கணிதம்)
+            // 3. Maths (Includes Mental Maths)
             LibraryFolder(
                 id = "maths",
-                nameTamil = "கணிதம் (Maths)",
-                nameEnglish = "Mathematics Formulae & Notes",
-                description = "வாய்பாடுகள், இயற்கணிதம், வடிவியல், வரைபடங்கள் மற்றும் மாதிரி வினாத்தாள்கள்.",
-                badge = "வாய்பாடுகள் & சூத்திரங்கள்",
+                nameTamil = "Maths",
+                nameEnglish = "Mathematics & Mental Tricks",
+                description = "வாய்பாடுகள், இயற்கணிதம், மனக்கணக்கு 500 குறுக்குவழிகள் மற்றும் வினாத்தாள்கள்.",
+                badge = "சூத்திரங்கள் & மனக்கணக்கு",
                 icon = Icons.Default.Calculate,
                 primaryColor = Color(0xFFEA580C), // Warm Orange
                 secondaryColor = Color(0xFFF97316),
@@ -116,14 +126,24 @@ object MyLibraryRepository {
                         pageCount = 18,
                         sizeText = "1.5 MB",
                         textSnippet = "(a + b)² = a² + 2ab + b² | பரப்பளவு = நீளம் × அகலம்"
+                    ),
+                    LibraryDocument(
+                        id = "mm_1",
+                        title = "மனக்கணக்கு 1 விநாடி பெருக்கல் குறுக்குவழிகள்",
+                        subtitle = "வேத கணித எளிய வழிமுறைகள் மற்றும் பயிற்சிகள்",
+                        fileType = DocumentType.PDF,
+                        dateAdded = "24 Oct 2026",
+                        pageCount = 15,
+                        sizeText = "1.1 MB",
+                        textSnippet = "எண்களை மனதிலேயே கூட்டிப் பெருக்கும் எளிய சூத்திரங்கள்."
                     )
                 )
             ),
 
-            // 4. Science (அறிவியல்)
+            // 4. Science
             LibraryFolder(
                 id = "science",
-                nameTamil = "அறிவியல் (Science)",
+                nameTamil = "Science",
                 nameEnglish = "Physics, Chemistry & Biology",
                 description = "இயற்பியல் சோதனைகள், வேதியியல் வினைகள், உயிரியல் வரைபடங்கள்.",
                 badge = "அறிவியல் குறிப்புகள்",
@@ -144,10 +164,10 @@ object MyLibraryRepository {
                 )
             ),
 
-            // 5. Social (சமூக அறிவியல்)
+            // 5. Social
             LibraryFolder(
                 id = "social",
-                nameTamil = "சமூக அறிவியல் (Social)",
+                nameTamil = "Social",
                 nameEnglish = "History, Geography & Civics",
                 description = "வரலாற்று வரைபடங்கள், புவியியல் நில வரைபடங்கள், குடிமையியல் சட்டங்கள்.",
                 badge = "வரைபடங்கள் & வரலாறு",
@@ -168,58 +188,10 @@ object MyLibraryRepository {
                 )
             ),
 
-            // 6. Spoken English
-            LibraryFolder(
-                id = "spoken",
-                nameTamil = "Spoken English",
-                nameEnglish = "Daily Conversation & Pronunciation",
-                description = "பேச்சு ஆங்கில வாக்கியக் குறிப்புகள், உரையாடல் வழிகாட்டிகள்.",
-                badge = "பேச்சுப் பயிற்சி",
-                icon = Icons.Default.RecordVoiceOver,
-                primaryColor = Color(0xFF7C3AED), // Royal Purple
-                secondaryColor = Color(0xFF8B5CF6),
-                documents = mutableListOf(
-                    LibraryDocument(
-                        id = "spk_1",
-                        title = "Spoken English Daily 100 Sentences",
-                        subtitle = "தினசரி பயன்படுத்தும் 100 வாக்கியங்களின் முழுமையான அச்சுப் பிரதி",
-                        fileType = DocumentType.PDF,
-                        dateAdded = "26 Oct 2026",
-                        pageCount = 20,
-                        sizeText = "1.4 MB",
-                        textSnippet = "Daily English sentences with Tamil meanings and audio tips."
-                    )
-                )
-            ),
-
-            // 7. Mental Maths (மனக்கணக்கு)
-            LibraryFolder(
-                id = "mental_maths",
-                nameTamil = "மனக்கணக்கு (Mental Maths)",
-                nameEnglish = "Speed Maths & Vedic Tricks",
-                description = "வேகக் கணித உத்திகள், நினைவாற்றல் பெருக்கல் முறைகள், புதிர்கள்.",
-                badge = "வேகக் கணக்கு",
-                icon = Icons.Default.Psychology,
-                primaryColor = Color(0xFFB45309), // Amber Bronze
-                secondaryColor = Color(0xFFF59E0B),
-                documents = mutableListOf(
-                    LibraryDocument(
-                        id = "mm_1",
-                        title = "1 விநாடி பெருக்கல் குறுக்குவழிகள்",
-                        subtitle = "வேத கணித எளிய வழிமுறைகள் மற்றும் பயிற்சிகள்",
-                        fileType = DocumentType.PDF,
-                        dateAdded = "24 Oct 2026",
-                        pageCount = 15,
-                        sizeText = "1.1 MB",
-                        textSnippet = "எண்களை மனதிலேயே கூட்டிப் பெருக்கும் எளிய சூத்திரங்கள்."
-                    )
-                )
-            ),
-
-            // 8. Others (மற்றவை)
+            // 6. Others
             LibraryFolder(
                 id = "others",
-                nameTamil = "மற்றவை (Others)",
+                nameTamil = "Others",
                 nameEnglish = "General Knowledge & Handouts",
                 description = "பொது அறிவு, கைவினைப் படங்கள், தேர்வு அட்டவணைகள் மற்றும் பிற ஆவணங்கள்.",
                 badge = "பொதுக் குறிப்புகள்",

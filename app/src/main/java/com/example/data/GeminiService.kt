@@ -22,6 +22,10 @@ data class ChatMessage(
     val timestamp: Long = System.currentTimeMillis()
 )
 
+class DefaultQuotaExceededException(
+    message: String = "Default API quota முடிந்தது, App இல் API key store செய்யப்படவில்லை எனவே key யை ADD செய்யவும்"
+) : Exception(message)
+
 class GeminiService(private val apiKeyManager: ApiKeyManager) {
 
     private val client = OkHttpClient.Builder()
@@ -153,6 +157,10 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
     /**
      * High-Precision Direct Multimodal Vision Analysis for Worksheets & Textbooks:
      * - Examines the image directly with Gemini Vision without corrupting OCR input
+     * - First attempts with the built-in Code's Default Key
+     * - If default key quota is exhausted (HTTP 429 / Quota Exceeded):
+     *   * Automatically switches to user's saved key if available
+     *   * If user key is not stored, returns DefaultQuotaExceededException
      * - Preserves question numbering (1, 2, 3..), MCQ choices ((a), (b), (c), (d)..), and line sequence
      * - Uses model cascade (gemini-2.5-flash -> gemini-2.0-flash -> gemini-1.5-flash)
      * - Generates step-by-step solutions, key vocabulary, and natural Tamil translation
@@ -160,25 +168,75 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
     suspend fun analyzeBookImageDirect(
         bitmap: Bitmap
     ): Result<OcrResult> = withContext(Dispatchers.IO) {
-        val apiKey = apiKeyManager.getApiKey().trim()
-        if (apiKey.isBlank()) {
+        val defaultKey = apiKeyManager.getDefaultApiKey().trim()
+        val userKey = apiKeyManager.getUserCustomKey().trim()
+
+        val models = listOf("gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash")
+
+        // 1. First try with Code's Default Key
+        if (defaultKey.isNotBlank()) {
+            var quotaExhausted = false
+            var lastDefaultError = ""
+
+            for (model in models) {
+                val attempt = callGeminiVisionApiDirect(model, defaultKey, bitmap)
+                if (attempt.isSuccess) {
+                    return@withContext attempt
+                }
+                val errMsg = attempt.exceptionOrNull()?.message.orEmpty()
+                lastDefaultError = errMsg
+                if (isQuotaExceededError(errMsg)) {
+                    quotaExhausted = true
+                    break
+                }
+            }
+
+            // If default key quota was exhausted:
+            if (quotaExhausted) {
+                // If user has stored an API key in the app, switch to it seamlessly!
+                if (userKey.isNotBlank()) {
+                    for (model in models) {
+                        val userAttempt = callGeminiVisionApiDirect(model, userKey, bitmap)
+                        if (userAttempt.isSuccess) {
+                            return@withContext userAttempt
+                        }
+                    }
+                } else {
+                    // User has not stored an API key in the app!
+                    return@withContext Result.failure(
+                        DefaultQuotaExceededException("Default API quota முடிந்தது, App இல் API key store செய்யப்படவில்லை எனவே key யை ADD செய்யவும்")
+                    )
+                }
+            }
+        }
+
+        // 2. If default key was not available or had non-quota failure, try user key if present
+        if (userKey.isNotBlank()) {
+            for (model in models) {
+                val userAttempt = callGeminiVisionApiDirect(model, userKey, bitmap)
+                if (userAttempt.isSuccess) {
+                    return@withContext userAttempt
+                }
+            }
+        }
+
+        // 3. If neither worked or neither key exists
+        if (defaultKey.isBlank() && userKey.isBlank()) {
             return@withContext Result.failure(
-                IllegalStateException("Gemini API Key அமைக்கப்படவில்லை. திரையின் மேலே உள்ள 'Key' பட்டனைத் தொட்டு உங்கள் Google AI Studio Key-ஐ உள்ளிடவும்.")
+                DefaultQuotaExceededException("Default API quota முடிந்தது, App இல் API key store செய்யப்படவில்லை எனவே key யை ADD செய்யவும்")
             )
         }
 
-        val models = listOf("gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash")
-        var lastFailure: Result<OcrResult> = Result.failure(Exception("AI இணைப்பு தோல்வியடைந்தது."))
+        return@withContext Result.failure(Exception("AI இணைப்பு தோல்வியடைந்தது. தயவுசெய்து சிறிது நேரம் கழித்து மீண்டும் முயற்சிக்கவும்."))
+    }
 
-        for (model in models) {
-            val attempt = callGeminiVisionApiDirect(model, apiKey, bitmap)
-            if (attempt.isSuccess) {
-                return@withContext attempt
-            }
-            lastFailure = attempt
-        }
-
-        return@withContext lastFailure
+    private fun isQuotaExceededError(errorMsg: String): Boolean {
+        val lower = errorMsg.lowercase()
+        return lower.contains("429") ||
+                lower.contains("quota") ||
+                lower.contains("resource_exhausted") ||
+                lower.contains("rate limit") ||
+                lower.contains("too many requests")
     }
 
     /**

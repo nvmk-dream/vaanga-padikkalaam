@@ -3,8 +3,6 @@ package com.example.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import com.example.data.ApiKeyManager
-import com.example.data.GeminiService
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
@@ -12,9 +10,6 @@ import android.os.Build
 import android.provider.MediaStore
 import android.speech.tts.TextToSpeech
 import android.widget.Toast
-import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.text.TextRecognition
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
@@ -25,7 +20,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -44,22 +38,34 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
+import com.example.data.ApiKeyManager
+import com.example.data.DefaultQuotaExceededException
+import com.example.data.GeminiService
 import com.example.ui.components.ApiKeyDialog
-import kotlinx.coroutines.delay
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.launch
 import java.util.Locale
 
 enum class OcrTab(val title: String) {
     EXTRACTED_TEXT("உரை"),
-    KEY_WORDS("முக்கிய சொற்கள்"),
+    KEY_WORDS("முக்கிய"),
     EXPLANATION("விளக்கம்"),
     TAMIL_TRANSLATION("தமிழில்")
+}
+
+enum class ScannerEngine(val title: String, val subtitle: String) {
+    GEMINI_AI("⚡ Gemini AI", "ஆன்லைன்"),
+    ML_KIT("📱 ML Kit", "ஆஃப்லைன்")
 }
 
 @Composable
@@ -74,7 +80,8 @@ fun ImageToTextScreen(
     val geminiService = remember { GeminiService(apiKeyManager) }
 
     // State management
-    var selectedTab by remember { mutableStateOf(OcrTab.TAMIL_TRANSLATION) }
+    var selectedTab by remember { mutableStateOf(OcrTab.EXTRACTED_TEXT) }
+    var selectedEngine by remember { mutableStateOf(ScannerEngine.GEMINI_AI) }
     var ocrResult by remember { mutableStateOf(ImageOcrProcessor.referenceBookResult) }
     var capturedBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
@@ -82,9 +89,30 @@ fun ImageToTextScreen(
     var processingStatus by remember { mutableStateOf("படத்தில் உள்ள உரையை AI வாசிக்கிறது...") }
     var showEditDialog by remember { mutableStateOf(false) }
     var showKeyDialog by remember { mutableStateOf(false) }
+    var showQuotaDialog by remember { mutableStateOf(false) }
     var editedText by remember { mutableStateOf(ocrResult.rawEnglishText) }
-    var snackbarMessage by remember { mutableStateOf<String?>(null) }
     var hasValidKey by remember { mutableStateOf(apiKeyManager.getApiKey().isNotBlank()) }
+
+    // Theme palette matching User Technical Spec
+    val mauveHeader = Color(0xFF7D405D)
+    val roseGoldAccent = Color(0xFFB25B7B)
+    val mauveDeep = Color(0xFF633249)
+    val buttonGradient = Brush.linearGradient(
+        colors = listOf(Color(0xFF8A4867), Color(0xFF633249))
+    )
+    val glassCardBackground = Color(0xFFFFF9FA).copy(alpha = 0.88f)
+    val glassBorder = BorderStroke(1.dp, Color.White.copy(alpha = 0.65f))
+    val deepTextColor = Color(0xFF3B1E2B)
+    val mutedTextColor = Color(0xFF6B4D5B)
+
+    // Dynamic background based on active page / tab:
+    // Tab "உரை" (EXTRACTED_TEXT) uses School Supplies Theme (Image 1 style)
+    // Sub-pages ("முக்கிய", "விளக்கம்", "தமிழில்") use Pink Feathers Theme (Image 2 style)
+    val backgroundRes = if (selectedTab == OcrTab.EXTRACTED_TEXT) {
+        R.drawable.bg_school_supplies
+    } else {
+        R.drawable.bg_pink_feathers
+    }
 
     // Text to Speech
     var ttsEngine by remember { mutableStateOf<TextToSpeech?>(null) }
@@ -120,10 +148,10 @@ fun ImageToTextScreen(
         val clip = ClipData.newPlainText(label, text)
         clipboard.setPrimaryClip(clip)
         Toast.makeText(context, "$label நகலெடுக்கப்பட்டது (Copied)!", Toast.LENGTH_SHORT).show()
-        snackbarMessage = "$label நகலெடுக்கப்பட்டது!"
     }
 
     fun runMlKitOffline(bitmap: Bitmap, reasonMessage: String) {
+        isProcessing = true
         processingStatus = "ஆஃப்லைன் ஸ்கேனர் உரையைப் பெறுகிறது..."
         try {
             val image = InputImage.fromBitmap(bitmap, 0)
@@ -134,7 +162,7 @@ fun ImageToTextScreen(
                     if (ocrRaw.isNotEmpty()) {
                         ocrResult = ImageOcrProcessor.buildFallbackResult(ocrRaw)
                         editedText = ocrResult.rawEnglishText
-                        Toast.makeText(context, "$reasonMessage: ஆஃப்லைன் உரை எடுக்கப்பட்டது.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "$reasonMessage: ஆஃப்லைன் உரை பெறப்பட்டது.", Toast.LENGTH_SHORT).show()
                     } else {
                         Toast.makeText(context, "படத்தில் உரை எதுவும் கண்டறியப்படவில்லை.", Toast.LENGTH_LONG).show()
                     }
@@ -152,20 +180,12 @@ fun ImageToTextScreen(
     }
 
     fun runOcrOnBitmap(bitmap: Bitmap) {
-        isProcessing = true
-
-        if (!apiKeyManager.hasValidKey()) {
-            processingStatus = "Gemini API Key அமைக்கப்படவில்லை..."
-            Toast.makeText(
-                context,
-                "Gemini Vision பயன்படுத்த மேலே உள்ள 'Key' பட்டனைத் தொட்டு API Key உள்ளிடவும்.",
-                Toast.LENGTH_LONG
-            ).show()
-            showKeyDialog = true
-            runMlKitOffline(bitmap, "API Key இல்லாததால்")
+        if (selectedEngine == ScannerEngine.ML_KIT) {
+            runMlKitOffline(bitmap, "ஆஃப்லைன் ML Kit")
             return
         }
 
+        isProcessing = true
         processingStatus = "சுபிக்ஷா AI ஆசிரியர் படத்தை நேரடியாக வாசிக்கிறது (Gemini Vision)..."
 
         coroutineScope.launch {
@@ -178,8 +198,13 @@ fun ImageToTextScreen(
                 isProcessing = false
             }.onFailure { err ->
                 val errorMsg = err.localizedMessage ?: "AI ஆய்வு தோல்வியடைந்தது"
-                Toast.makeText(context, "AI பிழை: $errorMsg (ஆஃப்லைன் ஸ்கேனர் இயக்கப்படுகிறது)", Toast.LENGTH_LONG).show()
-                runMlKitOffline(bitmap, "AI பிழை ஏற்பட்டதால்")
+                if (err is DefaultQuotaExceededException || errorMsg.contains("Default API quota முடிந்தது")) {
+                    isProcessing = false
+                    showQuotaDialog = true
+                } else {
+                    Toast.makeText(context, "AI பிழை: $errorMsg (ஆஃப்லைன் ஸ்கேனர் இயக்கப்படுகிறது)", Toast.LENGTH_LONG).show()
+                    runMlKitOffline(bitmap, "AI பிழை ஏற்பட்டதால்")
+                }
             }
         }
     }
@@ -233,276 +258,378 @@ fun ImageToTextScreen(
         }
     }
 
-    val backgroundDark = Color(0xFF030712)
-    val cardBackground = Color(0xFF0B1528)
-    val cyanAccent = Color(0xFF00B4D8)
-    val cyanDark = Color(0xFF0077B6)
-    val cyanBorder = Color(0xFF0284C7)
+    // 2-Layer Architecture (Z-Index: 1 Background Wallpaper, Z-Index: 2 Glassmorphism UI)
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Z-Index: 1 - Background Wallpaper
+        Image(
+            painter = painterResource(id = backgroundRes),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = backgroundDark
-    ) { paddingValues ->
-        Column(
+        // Semi-transparent frosted glass gradient overlay for high contrast and readability
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // Top Bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onBackClick,
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.1f))
-                        .testTag("ocr_back_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = Color.White
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.25f),
+                            Color(0xFFFFF0F5).copy(alpha = 0.40f)
+                        )
                     )
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Text(
-                    text = "Image to Text",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    modifier = Modifier.weight(1f)
                 )
+        )
 
-                // API Key Setup Button
-                IconButton(
-                    onClick = { showKeyDialog = true },
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(if (hasValidKey) Color(0xFF10B981).copy(alpha = 0.2f) else cyanAccent.copy(alpha = 0.15f))
-                        .testTag("ocr_api_key_btn")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Key,
-                        contentDescription = "Gemini Key",
-                        tint = if (hasValidKey) Color(0xFF10B981) else cyanAccent,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(6.dp))
-
-                // Demo Switcher
-                IconButton(
-                    onClick = {
-                        capturedBitmap = null
-                        selectedImageUri = null
-                        ocrResult = if (ocrResult.originalHeading == ImageOcrProcessor.referenceBookResult.originalHeading) {
-                            ImageOcrProcessor.scienceSample
-                        } else {
-                            ImageOcrProcessor.referenceBookResult
-                        }
-                        editedText = ocrResult.rawEnglishText
-                        Toast.makeText(context, "மாதிரிப் புத்தகம் மாற்றப்பட்டது!", Toast.LENGTH_SHORT).show()
-                    },
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(cyanAccent.copy(alpha = 0.15f))
-                        .testTag("ocr_sample_switch_btn")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CollectionsBookmark,
-                        contentDescription = "Switch Sample",
-                        tint = cyanAccent,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(6.dp))
-
-                IconButton(
-                    onClick = { onAskGemini("இந்தப் புத்தக உரையை மேலும் ஆழமாக எனக்குத் தமிழில் விளக்குங்கள்:\n${ocrResult.rawEnglishText}") },
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(cyanAccent.copy(alpha = 0.15f))
-                        .testTag("ocr_ask_ai_btn")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.AutoAwesome,
-                        contentDescription = "Ask AI",
-                        tint = cyanAccent,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            // Scrollable Body
-            LazyColumn(
+        // Z-Index: 2 - Floating UI Scaffold
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = Color.Transparent
+        ) { paddingValues ->
+            Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                    .fillMaxSize()
+                    .padding(paddingValues)
             ) {
-                // Book Image / Captured Photo Preview
-                item {
-                    BookImagePreviewCard(
-                        bitmap = capturedBitmap,
-                        ocrResult = ocrResult,
-                        isProcessing = isProcessing,
-                        processingStatus = processingStatus,
-                        cyanBorder = cyanBorder,
-                        onCameraClick = {
-                            cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
-                        },
-                        onGalleryClick = {
-                            galleryLauncher.launch(
-                                androidx.activity.result.PickVisualMediaRequest(
-                                    ActivityResultContracts.PickVisualMedia.ImageOnly
-                                )
-                            )
-                        }
-                    )
-                }
-
-                // 4 Interactive Navigation Tabs
-                item {
-                    OcrTabsRow(
-                        selectedTab = selectedTab,
-                        onTabSelected = { selectedTab = it },
-                        cyanAccent = cyanAccent
-                    )
-                }
-
-                // Tab Content Card
-                item {
-                    Card(
+                // Top Bar with Mauve buttons (#7D405D)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = onBackClick,
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .border(BorderStroke(1.dp, Color(0xFF1E293B)), RoundedCornerShape(18.dp))
-                            .shadow(6.dp, RoundedCornerShape(18.dp)),
-                        colors = CardDefaults.cardColors(containerColor = cardBackground),
-                        shape = RoundedCornerShape(18.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.85f))
+                            .border(BorderStroke(1.dp, mauveHeader.copy(alpha = 0.25f)), CircleShape)
+                            .testTag("ocr_back_button")
                     ) {
-                        Box(modifier = Modifier.padding(16.dp)) {
-                            when (selectedTab) {
-                                OcrTab.EXTRACTED_TEXT -> {
-                                    ExtractedTextTabContent(
-                                        ocrResult = ocrResult,
-                                        onEdit = { showEditDialog = true },
-                                        onSpeak = { speak(ocrResult.rawEnglishText) },
-                                        onCopy = { copyToClipboard("அசல் ஆங்கில உரை", ocrResult.rawEnglishText) },
-                                        cyanAccent = cyanAccent
-                                    )
-                                }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = mauveHeader
+                        )
+                    }
 
-                                OcrTab.KEY_WORDS -> {
-                                    KeyWordsTabContent(
-                                        keyWords = ocrResult.keyWords,
-                                        onSpeakWord = { word -> speak(word, word) },
-                                        onSpeakAll = {
-                                            val allWords = ocrResult.keyWords.joinToString(". ") { it.english }
-                                            speak(allWords)
-                                        },
-                                        speakingWord = speakingWord,
-                                        cyanAccent = cyanAccent
-                                    )
-                                }
+                    Spacer(modifier = Modifier.width(12.dp))
 
-                                OcrTab.EXPLANATION -> {
-                                    ExplanationTabContent(
-                                        explanation = ocrResult.detailedExplanation,
-                                        onSpeak = {
-                                            val text = "${ocrResult.detailedExplanation.headingTamil}. ${ocrResult.detailedExplanation.centralIdea}"
-                                            speak(text)
-                                        },
-                                        cyanAccent = cyanAccent
-                                    )
-                                }
+                    Text(
+                        text = "Image to Text",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = mauveDeep,
+                        modifier = Modifier.weight(1f)
+                    )
 
-                                OcrTab.TAMIL_TRANSLATION -> {
-                                    TamilTranslationTabContent(
-                                        translation = ocrResult.fullTamilTranslation,
-                                        onSpeak = { speak(ocrResult.fullTamilTranslation) },
-                                        cyanAccent = cyanAccent
+                    // Key Setup Button
+                    IconButton(
+                        onClick = { showKeyDialog = true },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.85f))
+                            .border(BorderStroke(1.dp, mauveHeader.copy(alpha = 0.25f)), CircleShape)
+                            .testTag("ocr_api_key_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Key,
+                            contentDescription = "Gemini Key",
+                            tint = mauveHeader,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    // Demo Switcher
+                    IconButton(
+                        onClick = {
+                            capturedBitmap = null
+                            selectedImageUri = null
+                            ocrResult = if (ocrResult.originalHeading == ImageOcrProcessor.referenceBookResult.originalHeading) {
+                                ImageOcrProcessor.scienceSample
+                            } else {
+                                ImageOcrProcessor.referenceBookResult
+                            }
+                            editedText = ocrResult.rawEnglishText
+                            Toast.makeText(context, "மாதிரிப் புத்தகம் மாற்றப்பட்டது!", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.85f))
+                            .border(BorderStroke(1.dp, mauveHeader.copy(alpha = 0.25f)), CircleShape)
+                            .testTag("ocr_sample_switch_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CollectionsBookmark,
+                            contentDescription = "Switch Sample",
+                            tint = mauveHeader,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    IconButton(
+                        onClick = { onAskGemini("இந்தப் புத்தக உரையை மேலும் ஆழமாக எனக்குத் தமிழில் விளக்குங்கள்:\n${ocrResult.rawEnglishText}") },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.85f))
+                            .border(BorderStroke(1.dp, mauveHeader.copy(alpha = 0.25f)), CircleShape)
+                            .testTag("ocr_ask_ai_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = "Ask AI",
+                            tint = mauveHeader,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                // Scrollable Body
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    // Scanner Mode Switch (⚡ Gemini AI vs 📱 ML Kit)
+                    item {
+                        ScannerEngineSwitch(
+                            selectedEngine = selectedEngine,
+                            onEngineSelected = { newEngine ->
+                                selectedEngine = newEngine
+                                Toast.makeText(
+                                    context,
+                                    if (newEngine == ScannerEngine.GEMINI_AI) "Gemini AI ஆன்லைன் மோடு செயலில் உள்ளது" else "ML Kit ஆஃப்லைன் மோடு செயலில் உள்ளது",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            },
+                            buttonGradient = buttonGradient,
+                            mauveHeader = mauveHeader
+                        )
+                    }
+
+                    // Book Image / Captured Photo Preview
+                    item {
+                        BookImagePreviewCard(
+                            bitmap = capturedBitmap,
+                            ocrResult = ocrResult,
+                            isProcessing = isProcessing,
+                            processingStatus = processingStatus,
+                            buttonGradient = buttonGradient,
+                            deepTextColor = deepTextColor,
+                            mauveHeader = mauveHeader,
+                            onCameraClick = {
+                                cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+                            },
+                            onGalleryClick = {
+                                galleryLauncher.launch(
+                                    androidx.activity.result.PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly
                                     )
+                                )
+                            }
+                        )
+                    }
+
+                    // 4 Interactive Navigation Tabs (Rose Gold Accent on Active Tab #B25B7B)
+                    item {
+                        OcrTabsRow(
+                            selectedTab = selectedTab,
+                            onTabSelected = { selectedTab = it },
+                            activeColor = roseGoldAccent,
+                            textColor = mauveHeader
+                        )
+                    }
+
+                    // Tab Content Glassmorphism Card
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .shadow(8.dp, RoundedCornerShape(22.dp), ambientColor = Color(0x227D405D))
+                                .border(glassBorder, RoundedCornerShape(22.dp)),
+                            colors = CardDefaults.cardColors(containerColor = glassCardBackground),
+                            shape = RoundedCornerShape(22.dp)
+                        ) {
+                            Box(modifier = Modifier.padding(18.dp)) {
+                                when (selectedTab) {
+                                    OcrTab.EXTRACTED_TEXT -> {
+                                        ExtractedTextTabContent(
+                                            ocrResult = ocrResult,
+                                            onEdit = { showEditDialog = true },
+                                            onSpeak = { speak(ocrResult.rawEnglishText) },
+                                            onCopy = { copyToClipboard("அசல் ஆங்கில உரை", ocrResult.rawEnglishText) },
+                                            accentColor = mauveHeader,
+                                            deepTextColor = deepTextColor
+                                        )
+                                    }
+
+                                    OcrTab.KEY_WORDS -> {
+                                        KeyWordsTabContent(
+                                            keyWords = ocrResult.keyWords,
+                                            onSpeakWord = { word -> speak(word, word) },
+                                            onSpeakAll = {
+                                                val allWords = ocrResult.keyWords.joinToString(". ") { it.english }
+                                                speak(allWords)
+                                            },
+                                            speakingWord = speakingWord,
+                                            accentColor = roseGoldAccent,
+                                            deepTextColor = deepTextColor
+                                        )
+                                    }
+
+                                    OcrTab.EXPLANATION -> {
+                                        ExplanationTabContent(
+                                            explanation = ocrResult.detailedExplanation,
+                                            onSpeak = {
+                                                val text = "${ocrResult.detailedExplanation.headingTamil}. ${ocrResult.detailedExplanation.centralIdea}"
+                                                speak(text)
+                                            },
+                                            accentColor = mauveHeader,
+                                            deepTextColor = deepTextColor
+                                        )
+                                    }
+
+                                    OcrTab.TAMIL_TRANSLATION -> {
+                                        TamilTranslationTabContent(
+                                            translation = ocrResult.fullTamilTranslation,
+                                            onSpeak = { speak(ocrResult.fullTamilTranslation) },
+                                            accentColor = mauveHeader,
+                                            deepTextColor = deepTextColor
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            // Bottom Action Button
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 10.dp)
-            ) {
-                Button(
-                    onClick = {
-                        when (selectedTab) {
-                            OcrTab.TAMIL_TRANSLATION -> copyToClipboard("தமிழ் மொழிபெயர்ப்பு", ocrResult.fullTamilTranslation)
-                            OcrTab.EXTRACTED_TEXT -> copyToClipboard("ஆங்கில உரை", ocrResult.rawEnglishText)
-                            OcrTab.KEY_WORDS -> {
-                                val text = ocrResult.keyWords.joinToString("\n") { "${it.english} — ${it.tamil}" }
-                                copyToClipboard("முக்கியச் சொற்கள்", text)
-                            }
-                            OcrTab.EXPLANATION -> {
-                                val text = "${ocrResult.detailedExplanation.headingTamil}\n\n${ocrResult.detailedExplanation.centralIdea}\n\n${ocrResult.detailedExplanation.practicalApplication}"
-                                copyToClipboard("விளக்கம்", text)
-                            }
-                        }
-                    },
+                // Bottom Action Button with Mauve Linear Gradient
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp)
-                        .clip(RoundedCornerShape(26.dp))
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(cyanAccent, cyanDark)
-                            )
-                        )
-                        .testTag("ocr_bottom_action_btn"),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Transparent
-                    )
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                    Button(
+                        onClick = {
+                            when (selectedTab) {
+                                OcrTab.TAMIL_TRANSLATION -> copyToClipboard("தமிழ் மொழிபெயர்ப்பு", ocrResult.fullTamilTranslation)
+                                OcrTab.EXTRACTED_TEXT -> copyToClipboard("ஆங்கில உரை", ocrResult.rawEnglishText)
+                                OcrTab.KEY_WORDS -> {
+                                    val text = ocrResult.keyWords.joinToString("\n") { "${it.english} — ${it.tamil}" }
+                                    copyToClipboard("முக்கியச் சொற்கள்", text)
+                                }
+                                OcrTab.EXPLANATION -> {
+                                    val text = "${ocrResult.detailedExplanation.headingTamil}\n\n${ocrResult.detailedExplanation.centralIdea}\n\n${ocrResult.detailedExplanation.practicalApplication}"
+                                    copyToClipboard("விளக்கம்", text)
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .shadow(6.dp, RoundedCornerShape(26.dp))
+                            .clip(RoundedCornerShape(26.dp))
+                            .background(buttonGradient)
+                            .testTag("ocr_bottom_action_btn"),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Transparent
+                        )
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.ContentCopy,
-                            contentDescription = "Copy",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = when (selectedTab) {
-                                OcrTab.TAMIL_TRANSLATION -> "தமிழ் உரையை நகலெடு"
-                                OcrTab.EXTRACTED_TEXT -> "ஆங்கில உரையை நகலெடு"
-                                OcrTab.KEY_WORDS -> "சொற்களை நகலெடு"
-                                OcrTab.EXPLANATION -> "விளக்கத்தை நகலெடு"
-                            },
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = "Copy",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = when (selectedTab) {
+                                    OcrTab.TAMIL_TRANSLATION -> "தமிழ் உரையை நகலெடு"
+                                    OcrTab.EXTRACTED_TEXT -> "ஆங்கில உரையை நகலெடு"
+                                    OcrTab.KEY_WORDS -> "சொற்களை நகலெடு"
+                                    OcrTab.EXPLANATION -> "விளக்கத்தை நகலெடு"
+                                },
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
             }
         }
+    }
+
+    // Default Quota Exceeded Alert Dialog
+    if (showQuotaDialog) {
+        AlertDialog(
+            onDismissRequest = { showQuotaDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = roseGoldAccent
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "API Quota முடிவு",
+                        fontWeight = FontWeight.Bold,
+                        color = mauveDeep
+                    )
+                }
+            },
+            text = {
+                Text(
+                    text = "Default API quota முடிந்தது, App இல் API key store செய்யப்படவில்லை எனவே key யை ADD செய்யவும்",
+                    color = deepTextColor,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showQuotaDialog = false
+                        showKeyDialog = true
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = mauveHeader),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Key-ஐ ADD செய்க", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = {
+                        showQuotaDialog = false
+                        selectedEngine = ScannerEngine.ML_KIT
+                        capturedBitmap?.let { runMlKitOffline(it, "ஆஃப்லைன் முறை") }
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, mauveHeader.copy(alpha = 0.5f))
+                ) {
+                    Text("ஆஃப்லைன் ML Kit", color = mauveHeader)
+                }
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(22.dp)
+        )
     }
 
     // Key Setup Dialog
@@ -524,7 +651,7 @@ fun ImageToTextScreen(
                 Text(
                     text = "ஆங்கில உரையைத் திருத்து",
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = mauveDeep
                 )
             },
             text = {
@@ -535,10 +662,10 @@ fun ImageToTextScreen(
                         .fillMaxWidth()
                         .height(180.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedBorderColor = cyanAccent,
-                        unfocusedBorderColor = Color.Gray
+                        focusedTextColor = deepTextColor,
+                        unfocusedTextColor = deepTextColor,
+                        focusedBorderColor = roseGoldAccent,
+                        unfocusedBorderColor = Color.LightGray
                     )
                 )
             },
@@ -549,18 +676,74 @@ fun ImageToTextScreen(
                         showEditDialog = false
                         Toast.makeText(context, "உரை புதுப்பிக்கப்பட்டது!", Toast.LENGTH_SHORT).show()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = cyanDark)
+                    colors = ButtonDefaults.buttonColors(containerColor = mauveHeader),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("புதுப்பி (Update)", color = Color.White)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showEditDialog = false }) {
-                    Text("ரத்து (Cancel)", color = Color.LightGray)
+                    Text("ரத்து (Cancel)", color = mutedTextColor)
                 }
             },
-            containerColor = cardBackground
+            containerColor = Color.White,
+            shape = RoundedCornerShape(22.dp)
         )
+    }
+}
+
+@Composable
+private fun ScannerEngineSwitch(
+    selectedEngine: ScannerEngine,
+    onEngineSelected: (ScannerEngine) -> Unit,
+    buttonGradient: Brush,
+    mauveHeader: Color
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White.copy(alpha = 0.85f))
+            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.9f)), RoundedCornerShape(16.dp))
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        ScannerEngine.values().forEach { engine ->
+            val isSelected = engine == selectedEngine
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        if (isSelected) buttonGradient else Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+                    )
+                    .clickable { onEngineSelected(engine) }
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = engine.title,
+                        fontSize = 13.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSelected) Color.White else mauveHeader
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Surface(
+                        color = if (isSelected) Color.White.copy(alpha = 0.25f) else mauveHeader.copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Text(
+                            text = engine.subtitle,
+                            fontSize = 10.sp,
+                            color = if (isSelected) Color.White else mauveHeader,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -570,42 +753,44 @@ private fun BookImagePreviewCard(
     ocrResult: OcrResult,
     isProcessing: Boolean,
     processingStatus: String,
-    cyanBorder: Color,
+    buttonGradient: Brush,
+    deepTextColor: Color,
+    mauveHeader: Color,
     onCameraClick: () -> Unit,
     onGalleryClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .border(BorderStroke(1.5.dp, cyanBorder), RoundedCornerShape(18.dp))
-            .shadow(10.dp, RoundedCornerShape(18.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0A1220)),
-        shape = RoundedCornerShape(18.dp)
+            .shadow(8.dp, RoundedCornerShape(22.dp), ambientColor = Color(0x227D405D))
+            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.75f)), RoundedCornerShape(22.dp)),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.88f)),
+        shape = RoundedCornerShape(22.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp)
+                .padding(14.dp)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 210.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Color(0xFFF9F7F1))
-                    .border(BorderStroke(1.dp, Color(0xFFD4CEB8)), RoundedCornerShape(14.dp))
-                    .padding(18.dp),
+                    .heightIn(min = 190.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFFFFFBF7))
+                    .border(BorderStroke(1.dp, Color(0xFFE8DFD8)), RoundedCornerShape(16.dp))
+                    .padding(16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 if (isProcessing) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = Color(0xFF0077B6))
+                        CircularProgressIndicator(color = mauveHeader)
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             text = processingStatus,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1E293B),
+                            color = deepTextColor,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -616,7 +801,7 @@ private fun BookImagePreviewCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 180.dp, max = 260.dp)
-                            .clip(RoundedCornerShape(8.dp)),
+                            .clip(RoundedCornerShape(10.dp)),
                         contentScale = ContentScale.Fit
                     )
                 } else {
@@ -626,18 +811,18 @@ private fun BookImagePreviewCard(
                             fontSize = 17.sp,
                             fontWeight = FontWeight.ExtraBold,
                             fontFamily = FontFamily.Serif,
-                            color = Color(0xFF0F172A),
+                            color = deepTextColor,
                             lineHeight = 22.sp
                         )
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
 
                         ocrResult.paragraphs.forEach { paragraph ->
                             Text(
                                 text = paragraph,
                                 fontSize = 14.sp,
                                 fontFamily = FontFamily.Serif,
-                                color = Color(0xFF334155),
+                                color = deepTextColor.copy(alpha = 0.85f),
                                 lineHeight = 20.sp,
                                 modifier = Modifier.padding(vertical = 3.dp)
                             )
@@ -646,7 +831,7 @@ private fun BookImagePreviewCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Row(
                 modifier = Modifier
@@ -657,18 +842,21 @@ private fun BookImagePreviewCard(
             ) {
                 Text(
                     text = if (bitmap != null) "✓ தேர்ந்தெடுக்கப்பட்ட படம்" else "உதாரணப் பாடப் புத்தகம்",
-                    fontSize = 12.sp,
-                    color = Color.LightGray,
-                    fontStyle = FontStyle.Italic
+                    fontSize = 13.sp,
+                    color = mauveHeader,
+                    fontStyle = FontStyle.Italic,
+                    fontWeight = FontWeight.Medium
                 )
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = onCameraClick,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0077B6)),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier.testTag("ocr_camera_btn")
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(buttonGradient)
+                            .testTag("ocr_camera_btn"),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.PhotoCamera,
@@ -677,15 +865,17 @@ private fun BookImagePreviewCard(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Camera", fontSize = 12.sp, color = Color.White)
+                        Text("Camera", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
                     }
 
                     Button(
                         onClick = onGalleryClick,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier.testTag("ocr_gallery_btn")
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(buttonGradient)
+                            .testTag("ocr_gallery_btn"),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.PhotoLibrary,
@@ -694,7 +884,7 @@ private fun BookImagePreviewCard(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Gallery", fontSize = 12.sp, color = Color.White)
+                        Text("Gallery", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -706,14 +896,15 @@ private fun BookImagePreviewCard(
 private fun OcrTabsRow(
     selectedTab: OcrTab,
     onTabSelected: (OcrTab) -> Unit,
-    cyanAccent: Color
+    activeColor: Color,
+    textColor: Color
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(Color(0xFF0D182E))
-            .border(BorderStroke(1.dp, Color(0xFF1E293B)), RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White.copy(alpha = 0.75f))
+            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.85f)), RoundedCornerShape(16.dp))
             .padding(4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -722,9 +913,9 @@ private fun OcrTabsRow(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(12.dp))
                     .background(
-                        if (isSelected) cyanAccent else Color.Transparent
+                        if (isSelected) activeColor else Color.Transparent
                     )
                     .clickable { onTabSelected(tab) }
                     .padding(vertical = 10.dp),
@@ -734,7 +925,7 @@ private fun OcrTabsRow(
                     text = tab.title,
                     fontSize = 12.sp,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = if (isSelected) Color(0xFF030712) else Color(0xFF94A3B8),
+                    color = if (isSelected) Color.White else textColor,
                     textAlign = TextAlign.Center,
                     maxLines = 1
                 )
@@ -749,7 +940,8 @@ private fun ExtractedTextTabContent(
     onEdit: () -> Unit,
     onSpeak: () -> Unit,
     onCopy: () -> Unit,
-    cyanAccent: Color
+    accentColor: Color,
+    deepTextColor: Color
 ) {
     Column {
         Row(
@@ -759,7 +951,7 @@ private fun ExtractedTextTabContent(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
-                    color = cyanAccent.copy(alpha = 0.2f),
+                    color = accentColor.copy(alpha = 0.15f),
                     shape = CircleShape,
                     modifier = Modifier.size(36.dp)
                 ) {
@@ -767,7 +959,7 @@ private fun ExtractedTextTabContent(
                         Icon(
                             imageVector = Icons.Default.Article,
                             contentDescription = null,
-                            tint = cyanAccent,
+                            tint = accentColor,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -777,7 +969,7 @@ private fun ExtractedTextTabContent(
                     text = "அசல் ஆங்கில உரை",
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = deepTextColor
                 )
             }
 
@@ -786,7 +978,7 @@ private fun ExtractedTextTabContent(
                     Icon(
                         imageVector = Icons.Default.Edit,
                         contentDescription = "Edit Text",
-                        tint = cyanAccent,
+                        tint = accentColor,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -794,7 +986,7 @@ private fun ExtractedTextTabContent(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                         contentDescription = "Listen English",
-                        tint = cyanAccent,
+                        tint = accentColor,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -802,7 +994,7 @@ private fun ExtractedTextTabContent(
                     Icon(
                         imageVector = Icons.Default.ContentCopy,
                         contentDescription = "Copy English",
-                        tint = cyanAccent,
+                        tint = accentColor,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -810,14 +1002,14 @@ private fun ExtractedTextTabContent(
         }
 
         HorizontalDivider(
-            color = Color.White.copy(alpha = 0.1f),
+            color = accentColor.copy(alpha = 0.15f),
             modifier = Modifier.padding(vertical = 12.dp)
         )
 
         Text(
             text = ocrResult.rawEnglishText,
             fontSize = 15.sp,
-            color = Color(0xFFF1F5F9),
+            color = deepTextColor,
             lineHeight = 22.sp,
             fontWeight = FontWeight.Normal
         )
@@ -830,7 +1022,8 @@ private fun KeyWordsTabContent(
     onSpeakWord: (String) -> Unit,
     onSpeakAll: () -> Unit,
     speakingWord: String?,
-    cyanAccent: Color
+    accentColor: Color,
+    deepTextColor: Color
 ) {
     Column {
         Row(
@@ -840,7 +1033,7 @@ private fun KeyWordsTabContent(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
-                    color = cyanAccent.copy(alpha = 0.2f),
+                    color = accentColor.copy(alpha = 0.15f),
                     shape = CircleShape,
                     modifier = Modifier.size(36.dp)
                 ) {
@@ -848,7 +1041,7 @@ private fun KeyWordsTabContent(
                         Icon(
                             imageVector = Icons.Default.FormatListBulleted,
                             contentDescription = null,
-                            tint = cyanAccent,
+                            tint = accentColor,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -858,7 +1051,7 @@ private fun KeyWordsTabContent(
                     text = "முக்கியச் சொற்கள் & அர்த்தங்கள்",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = deepTextColor
                 )
             }
 
@@ -866,21 +1059,21 @@ private fun KeyWordsTabContent(
                 onClick = onSpeakAll,
                 modifier = Modifier.height(34.dp),
                 shape = RoundedCornerShape(8.dp),
-                border = BorderStroke(1.dp, cyanAccent)
+                border = BorderStroke(1.dp, accentColor)
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                     contentDescription = null,
-                    tint = cyanAccent,
+                    tint = accentColor,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Listen All", fontSize = 11.sp, color = cyanAccent, fontWeight = FontWeight.Bold)
+                Text("Listen All", fontSize = 11.sp, color = accentColor, fontWeight = FontWeight.Bold)
             }
         }
 
         HorizontalDivider(
-            color = Color.White.copy(alpha = 0.1f),
+            color = accentColor.copy(alpha = 0.15f),
             modifier = Modifier.padding(vertical = 12.dp)
         )
 
@@ -889,9 +1082,10 @@ private fun KeyWordsTabContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 6.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFF0D1B32))
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.White.copy(alpha = 0.9f))
+                    .border(BorderStroke(1.dp, Color(0xFFF3E8EE)), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
@@ -900,17 +1094,17 @@ private fun KeyWordsTabContent(
                             text = word.english,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = deepTextColor
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Surface(
-                            color = cyanAccent.copy(alpha = 0.15f),
+                            color = accentColor.copy(alpha = 0.15f),
                             shape = RoundedCornerShape(4.dp)
                         ) {
                             Text(
                                 text = word.partOfSpeech,
                                 fontSize = 10.sp,
-                                color = cyanAccent,
+                                color = accentColor,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
@@ -919,7 +1113,7 @@ private fun KeyWordsTabContent(
                     Text(
                         text = word.tamil,
                         fontSize = 13.sp,
-                        color = Color(0xFF67E8F9),
+                        color = Color(0xFF8A4867),
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -930,13 +1124,13 @@ private fun KeyWordsTabContent(
                         .size(34.dp)
                         .clip(CircleShape)
                         .background(
-                            if (speakingWord == word.english) cyanAccent else cyanAccent.copy(alpha = 0.15f)
+                            if (speakingWord == word.english) accentColor else accentColor.copy(alpha = 0.15f)
                         )
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                         contentDescription = "Speak",
-                        tint = if (speakingWord == word.english) Color.White else cyanAccent,
+                        tint = if (speakingWord == word.english) Color.White else accentColor,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -949,7 +1143,8 @@ private fun KeyWordsTabContent(
 private fun ExplanationTabContent(
     explanation: OcrExplanation,
     onSpeak: () -> Unit,
-    cyanAccent: Color
+    accentColor: Color,
+    deepTextColor: Color
 ) {
     Column {
         Row(
@@ -959,7 +1154,7 @@ private fun ExplanationTabContent(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
-                    color = cyanAccent.copy(alpha = 0.2f),
+                    color = accentColor.copy(alpha = 0.15f),
                     shape = CircleShape,
                     modifier = Modifier.size(36.dp)
                 ) {
@@ -967,7 +1162,7 @@ private fun ExplanationTabContent(
                         Icon(
                             imageVector = Icons.Default.Lightbulb,
                             contentDescription = null,
-                            tint = cyanAccent,
+                            tint = accentColor,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -977,7 +1172,7 @@ private fun ExplanationTabContent(
                     text = explanation.headingTamil,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = deepTextColor
                 )
             }
 
@@ -985,22 +1180,22 @@ private fun ExplanationTabContent(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                     contentDescription = "Listen",
-                    tint = cyanAccent,
+                    tint = accentColor,
                     modifier = Modifier.size(20.dp)
                 )
             }
         }
 
         HorizontalDivider(
-            color = Color.White.copy(alpha = 0.1f),
+            color = accentColor.copy(alpha = 0.15f),
             modifier = Modifier.padding(vertical = 12.dp)
         )
 
         // Central Idea
         Surface(
-            color = cyanAccent.copy(alpha = 0.08f),
-            shape = RoundedCornerShape(10.dp),
-            border = BorderStroke(1.dp, cyanAccent.copy(alpha = 0.3f)),
+            color = accentColor.copy(alpha = 0.08f),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, accentColor.copy(alpha = 0.25f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
@@ -1008,13 +1203,13 @@ private fun ExplanationTabContent(
                     text = "🎯 மையக் கருத்து (Core Concept):",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = cyanAccent
+                    color = accentColor
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = explanation.centralIdea,
                     fontSize = 13.sp,
-                    color = Color(0xFFE2E8F0),
+                    color = deepTextColor,
                     lineHeight = 18.sp
                 )
             }
@@ -1022,31 +1217,41 @@ private fun ExplanationTabContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Paragraph Explanation
+        // Paragraph Explanation & Solutions
         Text(
-            text = "விரிவான கருத்து விளக்கம்:",
+            text = "விரிவான கருத்து விளக்கம் & விடைகள்:",
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.White
+            color = deepTextColor
         )
         Spacer(modifier = Modifier.height(6.dp))
 
         explanation.paragraphsExplanation.forEach { item ->
-            Text(
-                text = item,
-                fontSize = 13.sp,
-                color = Color(0xFFCBD5E1),
-                lineHeight = 18.sp,
-                modifier = Modifier.padding(vertical = 3.dp)
-            )
+            Surface(
+                color = Color.White.copy(alpha = 0.85f),
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, Color(0xFFF3E8EE)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 3.dp)
+            ) {
+                Text(
+                    text = item,
+                    fontSize = 13.sp,
+                    color = deepTextColor,
+                    lineHeight = 19.sp,
+                    modifier = Modifier.padding(10.dp)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
         // Practical Application
         Surface(
-            color = Color(0xFF1E293B),
-            shape = RoundedCornerShape(10.dp),
+            color = Color(0xFFFAF5F8),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, accentColor.copy(alpha = 0.2f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
@@ -1054,13 +1259,13 @@ private fun ExplanationTabContent(
                     text = "🌱 அன்றாட வாழ்வில் பயன்பாடு:",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF38BDF8)
+                    color = accentColor
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = explanation.practicalApplication,
                     fontSize = 12.sp,
-                    color = Color(0xFFE2E8F0),
+                    color = deepTextColor,
                     lineHeight = 17.sp
                 )
             }
@@ -1072,7 +1277,8 @@ private fun ExplanationTabContent(
 private fun TamilTranslationTabContent(
     translation: String,
     onSpeak: () -> Unit,
-    cyanAccent: Color
+    accentColor: Color,
+    deepTextColor: Color
 ) {
     Column {
         Row(
@@ -1082,7 +1288,7 @@ private fun TamilTranslationTabContent(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
-                    color = cyanAccent.copy(alpha = 0.2f),
+                    color = accentColor.copy(alpha = 0.15f),
                     shape = CircleShape,
                     modifier = Modifier.size(36.dp)
                 ) {
@@ -1090,7 +1296,7 @@ private fun TamilTranslationTabContent(
                         Icon(
                             imageVector = Icons.Default.Description,
                             contentDescription = null,
-                            tint = cyanAccent,
+                            tint = accentColor,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -1100,7 +1306,7 @@ private fun TamilTranslationTabContent(
                     text = "தமிழ் மொழிபெயர்ப்பு",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = deepTextColor
                 )
             }
 
@@ -1108,26 +1314,27 @@ private fun TamilTranslationTabContent(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                     contentDescription = "Listen",
-                    tint = cyanAccent,
+                    tint = accentColor,
                     modifier = Modifier.size(20.dp)
                 )
             }
         }
 
         HorizontalDivider(
-            color = Color.White.copy(alpha = 0.1f),
+            color = accentColor.copy(alpha = 0.15f),
             modifier = Modifier.padding(vertical = 12.dp)
         )
 
         Surface(
-            color = Color(0xFF0F2038),
+            color = Color.White.copy(alpha = 0.85f),
             shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, Color(0xFFF3E8EE)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
                 text = translation,
                 fontSize = 15.sp,
-                color = Color(0xFFE0F2FE),
+                color = deepTextColor,
                 lineHeight = 24.sp,
                 fontWeight = FontWeight.Normal,
                 modifier = Modifier.padding(14.dp)

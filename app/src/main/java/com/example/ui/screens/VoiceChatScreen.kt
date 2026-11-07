@@ -15,10 +15,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -254,30 +258,43 @@ fun VoiceChatScreen(
         }
     }
 
-    // Theme Colors matching the 12-screen UI Collage (Midnight Navy & Cyan/Royal Blue)
-    val bgDark = Color(0xFF030712)
-    val cardDark = Color(0xFF0B1528)
-    val cyanAccent = Color(0xFF00B4D8)
-    val cyanDark = Color(0xFF0077B6)
-    val geminiPurple = Color(0xFF7C3AED)
+    // Theme Colors matching User Technical Spec & Glassmorphism CSS
+    val mauveHeader = Color(0xFF7D405D)
+    val roseGoldAccent = Color(0xFFB45B80) // CSS: #b45b80
+    val mauveDeep = Color(0xFF633249)
+    val deepTextColor = Color(0xFF2E1A23)
+    val mutedTextColor = Color(0xFF5A3A4A)
+    val buttonGradient = Brush.linearGradient(
+        colors = listOf(Color(0xFF85405F), Color(0xFF71334F))
+    )
+    val glassCardBackground = Color.White.copy(alpha = 0.10f)
+    val glassBorder = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f))
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = Color.Transparent
     ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xFF060D1A),
-                            Color(0xFF0A192F),
-                            Color(0xFF07101E)
+        // 2-Layer Glassmorphism Architecture: Image 2 Violet Flower Wallpaper + Soft Frosted Overlay
+        Box(modifier = Modifier.fillMaxSize()) {
+            Image(
+                painter = painterResource(id = R.drawable.bg_violet_flower),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.20f),
+                                Color(0xFFFFF0F5).copy(alpha = 0.35f)
+                            )
                         )
                     )
-                )
-        ) {
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -405,8 +422,9 @@ fun VoiceChatScreen(
                             handleUserUtterance(prompt)
                         }
                     )
-                }
             }
+        }
+        }
         }
         }
     }
@@ -419,7 +437,7 @@ fun VoiceChatScreen(
                 Text(
                     text = "AI-யிடம் கேள்வி கேட்க",
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = mauveDeep
                 )
             },
             text = {
@@ -429,10 +447,10 @@ fun VoiceChatScreen(
                     placeholder = { Text("உங்கள் கேள்வியை இங்கே தட்டச்சு செய்யவும்...") },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedBorderColor = cyanAccent,
-                        unfocusedBorderColor = Color.Gray
+                        focusedTextColor = deepTextColor,
+                        unfocusedTextColor = deepTextColor,
+                        focusedBorderColor = roseGoldAccent,
+                        unfocusedBorderColor = mauveHeader.copy(alpha = 0.5f)
                     )
                 )
             },
@@ -444,17 +462,19 @@ fun VoiceChatScreen(
                         showTextInputDialog = false
                         handleUserUtterance(query)
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = cyanDark)
+                    colors = ButtonDefaults.buttonColors(containerColor = mauveHeader),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("அனுப்பு (Send)", color = Color.White)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showTextInputDialog = false }) {
-                    Text("ரத்து (Cancel)", color = Color.LightGray)
+                    Text("ரத்து (Cancel)", color = mutedTextColor)
                 }
             },
-            containerColor = cardDark
+            containerColor = Color.White,
+            shape = RoundedCornerShape(24.dp)
         )
     }
 }
@@ -471,8 +491,16 @@ private fun VoiceChatHomeScreen(
     onNavigateSettings: () -> Unit,
     onBack: () -> Unit
 ) {
-    val cyanAccent = Color(0xFF00B4D8)
-    val cyanDark = Color(0xFF0077B6)
+    val mauveHeader = Color(0xFF7D405D)
+    val roseGoldAccent = Color(0xFFB45B80)
+    val mauveDeep = Color(0xFF633249)
+    val deepTextColor = Color(0xFF2E1A23)
+    val mutedTextColor = Color(0xFF5A3A4A)
+    val buttonGradient = Brush.linearGradient(
+        colors = listOf(Color(0xFF85405F), Color(0xFF71334F))
+    )
+    val glassCardBackground = Color.White.copy(alpha = 0.10f)
+    val glassBorder = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f))
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -490,12 +518,13 @@ private fun VoiceChatHomeScreen(
                     modifier = Modifier
                         .size(42.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.08f))
+                        .background(Color.White.copy(alpha = 0.85f))
+                        .border(BorderStroke(1.dp, mauveHeader.copy(alpha = 0.25f)), CircleShape)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = Color.White
+                        tint = mauveHeader
                     )
                 }
 
@@ -504,14 +533,15 @@ private fun VoiceChatHomeScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Subiksha Teacher",
-                        fontSize = 17.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = Color.White
+                        color = mauveDeep
                     )
                     Text(
                         text = "AI Voice Chat • தமிழ் & English",
-                        fontSize = 11.sp,
-                        color = cyanAccent
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = roseGoldAccent
                     )
                 }
 
@@ -520,27 +550,29 @@ private fun VoiceChatHomeScreen(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(cyanAccent.copy(alpha = 0.15f))
+                        .background(Color.White.copy(alpha = 0.85f))
+                        .border(BorderStroke(1.dp, mauveHeader.copy(alpha = 0.25f)), CircleShape)
                         .testTag("voice_home_settings_btn")
                 ) {
                     Icon(
                         imageVector = Icons.Default.Settings,
                         contentDescription = "Settings",
-                        tint = cyanAccent,
+                        tint = mauveHeader,
                         modifier = Modifier.size(20.dp)
                     )
                 }
             }
         }
 
-        // Cute Robot AI Banner
+        // Cute Robot AI Banner (.main-text-card)
         item {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(BorderStroke(1.2.dp, cyanAccent.copy(alpha = 0.6f)), RoundedCornerShape(20.dp)),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF0B172B)),
-                shape = RoundedCornerShape(20.dp)
+                    .shadow(6.dp, RoundedCornerShape(32.dp), ambientColor = Color(0x1A50323C))
+                    .border(glassBorder, RoundedCornerShape(32.dp)),
+                colors = CardDefaults.cardColors(containerColor = glassCardBackground),
+                shape = RoundedCornerShape(32.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -553,11 +585,7 @@ private fun VoiceChatHomeScreen(
                         modifier = Modifier
                             .size(64.dp)
                             .clip(CircleShape)
-                            .background(
-                                Brush.linearGradient(
-                                    colors = listOf(Color(0xFF00B4D8), Color(0xFF0077B6))
-                                )
-                            )
+                            .background(buttonGradient)
                             .shadow(8.dp, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
@@ -576,13 +604,13 @@ private fun VoiceChatHomeScreen(
                             text = "AI Voice Chat",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFFDE68A)
+                            color = mauveDeep
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "உங்கள் குரலில் பேசுங்கள்... AI உங்களைப் புரிந்து கொண்டு பதில் அளிக்கும்!",
                             fontSize = 12.sp,
-                            color = Color(0xFFE2E8F0),
+                            color = deepTextColor,
                             lineHeight = 17.sp
                         )
                     }
@@ -601,19 +629,21 @@ private fun VoiceChatHomeScreen(
                     modifier = Modifier
                         .weight(1f)
                         .height(115.dp)
-                        .clip(RoundedCornerShape(16.dp))
+                        .shadow(4.dp, RoundedCornerShape(32.dp), ambientColor = Color(0x1A50323C))
+                        .clip(RoundedCornerShape(32.dp))
                         .border(
                             BorderStroke(
-                                width = if (selectedProvider == AiProvider.CHATGPT) 2.dp else 1.dp,
-                                color = if (selectedProvider == AiProvider.CHATGPT) Color(0xFF10B981) else Color.White.copy(alpha = 0.15f)
+                                width = if (selectedProvider == AiProvider.CHATGPT) 2.dp else 1.5.dp,
+                                color = if (selectedProvider == AiProvider.CHATGPT) roseGoldAccent else Color.White.copy(alpha = 0.20f)
                             ),
-                            RoundedCornerShape(16.dp)
+                            RoundedCornerShape(32.dp)
                         )
                         .clickable { onSelectProvider(AiProvider.CHATGPT) }
                         .testTag("provider_chatgpt_card"),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (selectedProvider == AiProvider.CHATGPT) Color(0xFF064E3B).copy(alpha = 0.4f) else Color(0xFF0C192E)
-                    )
+                        containerColor = if (selectedProvider == AiProvider.CHATGPT) roseGoldAccent.copy(alpha = 0.20f) else glassCardBackground
+                    ),
+                    shape = RoundedCornerShape(32.dp)
                 ) {
                     Column(
                         modifier = Modifier
@@ -625,7 +655,7 @@ private fun VoiceChatHomeScreen(
                         Icon(
                             imageVector = Icons.Default.ChatBubble,
                             contentDescription = "ChatGPT",
-                            tint = Color(0xFF10B981),
+                            tint = if (selectedProvider == AiProvider.CHATGPT) roseGoldAccent else Color(0xFF10B981),
                             modifier = Modifier.size(28.dp)
                         )
                         Spacer(modifier = Modifier.height(6.dp))
@@ -633,12 +663,12 @@ private fun VoiceChatHomeScreen(
                             text = "ChatGPT",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = deepTextColor
                         )
                         Text(
                             text = "AI Assistant",
-                            fontSize = 10.sp,
-                            color = Color.LightGray
+                            fontSize = 11.sp,
+                            color = mutedTextColor
                         )
                     }
                 }
@@ -648,19 +678,21 @@ private fun VoiceChatHomeScreen(
                     modifier = Modifier
                         .weight(1f)
                         .height(115.dp)
-                        .clip(RoundedCornerShape(16.dp))
+                        .shadow(4.dp, RoundedCornerShape(32.dp), ambientColor = Color(0x1A50323C))
+                        .clip(RoundedCornerShape(32.dp))
                         .border(
                             BorderStroke(
-                                width = if (selectedProvider == AiProvider.GEMINI) 2.dp else 1.dp,
-                                color = if (selectedProvider == AiProvider.GEMINI) cyanAccent else Color.White.copy(alpha = 0.15f)
+                                width = if (selectedProvider == AiProvider.GEMINI) 2.dp else 1.5.dp,
+                                color = if (selectedProvider == AiProvider.GEMINI) roseGoldAccent else Color.White.copy(alpha = 0.20f)
                             ),
-                            RoundedCornerShape(16.dp)
+                            RoundedCornerShape(32.dp)
                         )
                         .clickable { onSelectProvider(AiProvider.GEMINI) }
                         .testTag("provider_gemini_card"),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (selectedProvider == AiProvider.GEMINI) Color(0xFF0369A1).copy(alpha = 0.4f) else Color(0xFF0C192E)
-                    )
+                        containerColor = if (selectedProvider == AiProvider.GEMINI) roseGoldAccent.copy(alpha = 0.20f) else glassCardBackground
+                    ),
+                    shape = RoundedCornerShape(32.dp)
                 ) {
                     Column(
                         modifier = Modifier
@@ -672,7 +704,7 @@ private fun VoiceChatHomeScreen(
                         Icon(
                             imageVector = Icons.Default.AutoAwesome,
                             contentDescription = "Gemini",
-                            tint = cyanAccent,
+                            tint = roseGoldAccent,
                             modifier = Modifier.size(28.dp)
                         )
                         Spacer(modifier = Modifier.height(6.dp))
@@ -680,38 +712,41 @@ private fun VoiceChatHomeScreen(
                             text = "Gemini",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = deepTextColor
                         )
                         Text(
                             text = "Google AI",
-                            fontSize = 10.sp,
-                            color = Color.LightGray
+                            fontSize = 11.sp,
+                            color = mutedTextColor
                         )
                     }
                 }
             }
         }
 
-        // Features Bullet Points Card
+        // Features Bullet Points Card (.result-card)
         item {
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF0B172B))
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(6.dp, RoundedCornerShape(32.dp), ambientColor = Color(0x1A50323C))
+                    .border(glassBorder, RoundedCornerShape(32.dp)),
+                shape = RoundedCornerShape(32.dp),
+                colors = CardDefaults.cardColors(containerColor = glassCardBackground)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(18.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    FeatureCheckRow("தமிழ், English அல்லது கலவை மொழியில் பேசலாம்")
-                    FeatureCheckRow("AI குரலில் உடனடி பதில் சொல்லும்")
-                    FeatureCheckRow("Text + Voice இரண்டும் ஒரே நேரத்தில் கிடைக்கும்")
-                    FeatureCheckRow("உங்கள் விருப்பமான AI-ஐத் தேர்ந்தெடுத்துக் கொள்ளலாம்")
+                    FeatureCheckRow("தமிழ், English அல்லது கலவை மொழியில் பேசலாம்", deepTextColor, roseGoldAccent)
+                    FeatureCheckRow("AI குரலில் உடனடி பதில் சொல்லும்", deepTextColor, roseGoldAccent)
+                    FeatureCheckRow("Text + Voice இரண்டும் ஒரே நேரத்தில் கிடைக்கும்", deepTextColor, roseGoldAccent)
+                    FeatureCheckRow("உங்கள் விருப்பமான AI-ஐத் தேர்ந்தெடுத்துக் கொள்ளலாம்", deepTextColor, roseGoldAccent)
                 }
             }
         }
 
-        // Main CTA Button "தொடங்குங்கள்"
+        // Main CTA Button "தொடங்குங்கள்" (.copy-button gradient & rounded 50.dp)
         item {
             Spacer(modifier = Modifier.height(6.dp))
             Button(
@@ -719,12 +754,9 @@ private fun VoiceChatHomeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp)
-                    .clip(RoundedCornerShape(26.dp))
-                    .background(
-                        Brush.horizontalGradient(
-                            colors = listOf(cyanAccent, cyanDark)
-                        )
-                    )
+                    .shadow(5.dp, RoundedCornerShape(50.dp), ambientColor = Color(0x33642841))
+                    .clip(RoundedCornerShape(50.dp))
+                    .background(buttonGradient)
                     .testTag("voice_chat_start_btn"),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
             ) {
@@ -752,19 +784,19 @@ private fun VoiceChatHomeScreen(
 }
 
 @Composable
-private fun FeatureCheckRow(text: String) {
+private fun FeatureCheckRow(text: String, textColor: Color, checkColor: Color) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = Icons.Default.CheckCircle,
             contentDescription = null,
-            tint = Color(0xFF10B981),
+            tint = checkColor,
             modifier = Modifier.size(18.dp)
         )
         Spacer(modifier = Modifier.width(10.dp))
         Text(
             text = text,
             fontSize = 13.sp,
-            color = Color(0xFFE2E8F0),
+            color = textColor,
             fontWeight = FontWeight.Medium
         )
     }
@@ -780,7 +812,15 @@ private fun AiProviderSelectScreen(
     onContinue: () -> Unit,
     onBack: () -> Unit
 ) {
-    val cyanAccent = Color(0xFF00B4D8)
+    val mauveHeader = Color(0xFF7D405D)
+    val roseGoldAccent = Color(0xFFB45B80)
+    val mauveDeep = Color(0xFF633249)
+    val deepTextColor = Color(0xFF2E1A23)
+    val buttonGradient = Brush.linearGradient(
+        colors = listOf(Color(0xFF85405F), Color(0xFF71334F))
+    )
+    val glassCardBackground = Color.White.copy(alpha = 0.10f)
+    val glassBorder = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f))
 
     Column(
         modifier = Modifier
@@ -796,16 +836,17 @@ private fun AiProviderSelectScreen(
                 modifier = Modifier
                     .size(42.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.08f))
+                    .background(Color.White.copy(alpha = 0.85f))
+                    .border(BorderStroke(1.dp, mauveHeader.copy(alpha = 0.25f)), CircleShape)
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = mauveHeader)
             }
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = "AI Provider Select",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = mauveDeep
             )
         }
 
@@ -815,7 +856,7 @@ private fun AiProviderSelectScreen(
             text = "உங்களுக்கு பிடித்த AI ஐத் தேர்ந்தெடுக்கவும்",
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.White
+            color = mauveDeep
         )
 
         Spacer(modifier = Modifier.height(14.dp))
@@ -826,7 +867,7 @@ private fun AiProviderSelectScreen(
             subtitle = "உலகின் சக்திவாய்ந்த AI உதவியாளர்",
             isSelected = selectedProvider == AiProvider.CHATGPT,
             icon = Icons.Default.ChatBubble,
-            accentColor = Color(0xFF10B981),
+            accentColor = roseGoldAccent,
             onClick = { onSelectProvider(AiProvider.CHATGPT) }
         )
 
@@ -838,31 +879,34 @@ private fun AiProviderSelectScreen(
             subtitle = "Google இன் AI உதவியாளர்",
             isSelected = selectedProvider == AiProvider.GEMINI,
             icon = Icons.Default.AutoAwesome,
-            accentColor = cyanAccent,
+            accentColor = roseGoldAccent,
             onClick = { onSelectProvider(AiProvider.GEMINI) }
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Why choose card
+        // Why choose card (.result-card)
         Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF0B172B)),
-            shape = RoundedCornerShape(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(6.dp, RoundedCornerShape(32.dp), ambientColor = Color(0x1A50323C))
+                .border(glassBorder, RoundedCornerShape(32.dp)),
+            colors = CardDefaults.cardColors(containerColor = glassCardBackground),
+            shape = RoundedCornerShape(32.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(18.dp)) {
                 Text(
                     text = "உங்கள் AI-யை ஏன் தேர்வு செய்ய வேண்டும்?",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFFDE68A)
+                    color = mauveDeep
                 )
                 Spacer(modifier = Modifier.height(10.dp))
-                FeatureCheckRow("உடனடி மற்றும் துல்லியமான பதில்")
+                FeatureCheckRow("உடனடி மற்றும் துல்லியமான பதில்", deepTextColor, roseGoldAccent)
                 Spacer(modifier = Modifier.height(6.dp))
-                FeatureCheckRow("தமிழ், English மற்றும் கலவை மொழி ஆதரவு")
+                FeatureCheckRow("தமிழ், English மற்றும் கலவை மொழி ஆதரவு", deepTextColor, roseGoldAccent)
                 Spacer(modifier = Modifier.height(6.dp))
-                FeatureCheckRow("குரல் மூலம் இயல்பான உரையாடல்")
+                FeatureCheckRow("குரல் மூலம் இயல்பான உரையாடல்", deepTextColor, roseGoldAccent)
             }
         }
 
@@ -872,11 +916,13 @@ private fun AiProviderSelectScreen(
             onClick = onContinue,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp)
-                .clip(RoundedCornerShape(25.dp)),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7))
+                .height(52.dp)
+                .shadow(5.dp, RoundedCornerShape(50.dp), ambientColor = Color(0x33642841))
+                .clip(RoundedCornerShape(50.dp))
+                .background(buttonGradient),
+            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
         ) {
-            Text("தொடரவும் (Continue) ->", color = Color.White, fontWeight = FontWeight.Bold)
+            Text("தொடரவும் (Continue) ->", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
         }
     }
 }
@@ -890,28 +936,39 @@ private fun ProviderRadioCard(
     accentColor: Color,
     onClick: () -> Unit
 ) {
+    val glassCardBackground = Color.White.copy(alpha = 0.10f)
+    val deepTextColor = Color(0xFF2E1A23)
+    val mutedTextColor = Color(0xFF5A3A4A)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .shadow(4.dp, RoundedCornerShape(32.dp), ambientColor = Color(0x1A50323C))
+            .clip(RoundedCornerShape(32.dp))
             .border(
-                BorderStroke(if (isSelected) 2.dp else 1.dp, if (isSelected) accentColor else Color.White.copy(alpha = 0.15f)),
-                RoundedCornerShape(16.dp)
+                BorderStroke(
+                    width = if (isSelected) 2.dp else 1.5.dp,
+                    color = if (isSelected) accentColor else Color.White.copy(alpha = 0.20f)
+                ),
+                RoundedCornerShape(32.dp)
             )
             .clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0C192E))
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) accentColor.copy(alpha = 0.18f) else glassCardBackground
+        ),
+        shape = RoundedCornerShape(32.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(18.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(icon, contentDescription = null, tint = accentColor, modifier = Modifier.size(32.dp))
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                Text(text = subtitle, fontSize = 12.sp, color = Color.LightGray)
+                Text(text = title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = deepTextColor)
+                Text(text = subtitle, fontSize = 12.sp, color = mutedTextColor)
             }
             RadioButton(
                 selected = isSelected,
@@ -942,7 +999,17 @@ private fun VoiceChatSettingsScreen(
     onSave: () -> Unit,
     onBack: () -> Unit
 ) {
-    val cyanAccent = Color(0xFF00B4D8)
+    val mauveHeader = Color(0xFF7D405D)
+    val roseGoldAccent = Color(0xFFB45B80)
+    val mauveDeep = Color(0xFF633249)
+    val deepTextColor = Color(0xFF2E1A23)
+    val mutedTextColor = Color(0xFF5A3A4A)
+    val buttonGradient = Brush.linearGradient(
+        colors = listOf(Color(0xFF85405F), Color(0xFF71334F))
+    )
+    val glassCardBackground = Color.White.copy(alpha = 0.10f)
+    val glassBorder = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f))
+
     var showOpenAiKey by remember { mutableStateOf(false) }
     var showGeminiKey by remember { mutableStateOf(false) }
 
@@ -962,39 +1029,43 @@ private fun VoiceChatSettingsScreen(
                     modifier = Modifier
                         .size(42.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.08f))
+                        .background(Color.White.copy(alpha = 0.85f))
+                        .border(BorderStroke(1.dp, mauveHeader.copy(alpha = 0.25f)), CircleShape)
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = mauveHeader)
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     text = "Voice Chat Settings",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = mauveDeep
                 )
             }
         }
 
-        // 1. மொழித் தேர்வு
+        // 1. மொழித் தேர்வு (.main-text-card)
         item {
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF0C192E)),
-                shape = RoundedCornerShape(16.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(6.dp, RoundedCornerShape(32.dp), ambientColor = Color(0x1A50323C))
+                    .border(glassBorder, RoundedCornerShape(32.dp)),
+                colors = CardDefaults.cardColors(containerColor = glassCardBackground),
+                shape = RoundedCornerShape(32.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(18.dp)) {
                     Text(
                         text = "மொழித் தேர்வு (Language)",
-                        fontSize = 14.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        color = cyanAccent
+                        color = mauveDeep
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                    LanguageRadioRow("தமிழ் (Tamil)", preferredLanguage == "ta") { onLanguageChange("ta") }
-                    LanguageRadioRow("English", preferredLanguage == "en") { onLanguageChange("en") }
-                    LanguageRadioRow("தமிழ் + English (Mixed)", preferredLanguage == "mixed") { onLanguageChange("mixed") }
+                    LanguageRadioRow("தமிழ் (Tamil)", preferredLanguage == "ta", roseGoldAccent, deepTextColor) { onLanguageChange("ta") }
+                    LanguageRadioRow("English", preferredLanguage == "en", roseGoldAccent, deepTextColor) { onLanguageChange("en") }
+                    LanguageRadioRow("தமிழ் + English (Mixed)", preferredLanguage == "mixed", roseGoldAccent, deepTextColor) { onLanguageChange("mixed") }
                 }
             }
         }
@@ -1002,21 +1073,31 @@ private fun VoiceChatSettingsScreen(
         // 2. AI பதில் குரல் & தானியங்கி Play
         item {
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF0C192E)),
-                shape = RoundedCornerShape(16.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(6.dp, RoundedCornerShape(32.dp), ambientColor = Color(0x1A50323C))
+                    .border(glassBorder, RoundedCornerShape(32.dp)),
+                colors = CardDefaults.cardColors(containerColor = glassCardBackground),
+                shape = RoundedCornerShape(32.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(18.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text("AI பதில் குரல்", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                            Text("AI குரலில் பதில் பேசும்", fontSize = 11.sp, color = Color.Gray)
+                            Text("AI பதில் குரல்", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = deepTextColor)
+                            Text("AI குரலில் பதில் பேசும்", fontSize = 11.sp, color = mutedTextColor)
                         }
-                        Switch(checked = voiceReply, onCheckedChange = onVoiceReplyChange)
+                        Switch(
+                            checked = voiceReply,
+                            onCheckedChange = onVoiceReplyChange,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = roseGoldAccent
+                            )
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
@@ -1027,28 +1108,43 @@ private fun VoiceChatSettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text("தானியங்கி Play (Auto Play)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                            Text("AI பதிலை தானாகவே கேட்கவும்", fontSize = 11.sp, color = Color.Gray)
+                            Text("தானியங்கி Play (Auto Play)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = deepTextColor)
+                            Text("AI பதிலை தானாகவே கேட்கவும்", fontSize = 11.sp, color = mutedTextColor)
                         }
-                        Switch(checked = autoPlayVoice, onCheckedChange = onAutoPlayChange)
+                        Switch(
+                            checked = autoPlayVoice,
+                            onCheckedChange = onAutoPlayChange,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = roseGoldAccent
+                            )
+                        )
                     }
                 }
             }
         }
 
-        // 3. குரல் வேகம்
+        // 3. குரல் வேகம் (.language-tabs)
         item {
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF0C192E)),
-                shape = RoundedCornerShape(16.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(6.dp, RoundedCornerShape(32.dp), ambientColor = Color(0x1A50323C))
+                    .border(glassBorder, RoundedCornerShape(32.dp)),
+                colors = CardDefaults.cardColors(containerColor = glassCardBackground),
+                shape = RoundedCornerShape(32.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("குரல் வேகம் (Voice Speed)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = cyanAccent)
-                    Spacer(modifier = Modifier.height(10.dp))
+                Column(modifier = Modifier.padding(18.dp)) {
+                    Text("குரல் வேகம் (Voice Speed)", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = mauveDeep)
+                    Spacer(modifier = Modifier.height(12.dp))
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(28.dp))
+                            .background(Color.White.copy(alpha = 0.10f))
+                            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.20f)), RoundedCornerShape(28.dp))
+                            .padding(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         SpeedButton("மெதுவாக", voiceSpeed == "slow") { onVoiceSpeedChange("slow") }
                         SpeedButton("சாதாரண", voiceSpeed == "normal") { onVoiceSpeedChange("normal") }
@@ -1061,23 +1157,27 @@ private fun VoiceChatSettingsScreen(
         // 4. Secret AI Keys (OpenAI & Gemini)
         item {
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF0C192E)),
-                shape = RoundedCornerShape(16.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(6.dp, RoundedCornerShape(32.dp), ambientColor = Color(0x1A50323C))
+                    .border(glassBorder, RoundedCornerShape(32.dp)),
+                colors = CardDefaults.cardColors(containerColor = glassCardBackground),
+                shape = RoundedCornerShape(32.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Secret AI Keys (உங்கள் சாவிகள்)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFDE68A))
+                Column(modifier = Modifier.padding(18.dp)) {
+                    Text("Secret AI Keys (உங்கள் சாவிகள்)", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = mauveDeep)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "சாவிகள் உங்கள் மொபைல் சாதனத்தில் மட்டுமே பாதுகாப்பாகச் சேமிக்கப்படும்.",
                         fontSize = 11.sp,
-                        color = Color.LightGray
+                        color = mutedTextColor
                     )
 
                     Spacer(modifier = Modifier.height(14.dp))
 
                     // OpenAI Key
-                    Text("OPENAI_API_KEY (ChatGPT)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("OPENAI_API_KEY (ChatGPT)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = deepTextColor)
+                    Spacer(modifier = Modifier.height(4.dp))
                     OutlinedTextField(
                         value = openAiKey,
                         onValueChange = onOpenAiKeyChange,
@@ -1085,35 +1185,52 @@ private fun VoiceChatSettingsScreen(
                         visualTransformation = if (showOpenAiKey) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
                             IconButton(onClick = { showOpenAiKey = !showOpenAiKey }) {
-                                Icon(if (showOpenAiKey) Icons.Default.VisibilityOff else Icons.Default.Visibility, contentDescription = null, tint = Color.Gray)
+                                Icon(if (showOpenAiKey) Icons.Default.VisibilityOff else Icons.Default.Visibility, contentDescription = null, tint = mauveHeader)
                             }
                         },
+                        shape = RoundedCornerShape(28.dp),
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = deepTextColor,
+                            unfocusedTextColor = deepTextColor,
+                            focusedBorderColor = roseGoldAccent,
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.4f),
+                            focusedContainerColor = Color.White.copy(alpha = 0.18f),
+                            unfocusedContainerColor = Color.White.copy(alpha = 0.18f)
+                        )
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // Gemini Key
-                    Text("GEMINI_API_KEY (Google AI)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("GEMINI_API_KEY (Google AI)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = deepTextColor)
+                    Spacer(modifier = Modifier.height(4.dp))
                     OutlinedTextField(
                         value = geminiKey,
                         onValueChange = onGeminiKeyChange,
-                        placeholder = { Text("AIzaSy...") },
+                        placeholder = { Text("AQ.Ab8RN6...") },
                         visualTransformation = if (showGeminiKey) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
                             IconButton(onClick = { showGeminiKey = !showGeminiKey }) {
-                                Icon(if (showGeminiKey) Icons.Default.VisibilityOff else Icons.Default.Visibility, contentDescription = null, tint = Color.Gray)
+                                Icon(if (showGeminiKey) Icons.Default.VisibilityOff else Icons.Default.Visibility, contentDescription = null, tint = mauveHeader)
                             }
                         },
+                        shape = RoundedCornerShape(28.dp),
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = deepTextColor,
+                            unfocusedTextColor = deepTextColor,
+                            focusedBorderColor = roseGoldAccent,
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.4f),
+                            focusedContainerColor = Color.White.copy(alpha = 0.18f),
+                            unfocusedContainerColor = Color.White.copy(alpha = 0.18f)
+                        )
                     )
                 }
             }
         }
 
-        // Action Buttons: Horizontal Row with Cancel & Save
+        // Action Buttons: Horizontal Row with Cancel & Save (.copy-button style)
         item {
             Row(
                 modifier = Modifier
@@ -1127,10 +1244,10 @@ private fun VoiceChatSettingsScreen(
                     modifier = Modifier
                         .weight(1f)
                         .height(50.dp),
-                    shape = RoundedCornerShape(25.dp),
-                    border = BorderStroke(1.dp, cyanAccent.copy(alpha = 0.6f))
+                    shape = RoundedCornerShape(50.dp),
+                    border = BorderStroke(1.5.dp, mauveHeader)
                 ) {
-                    Text("ரத்து செய்", color = cyanAccent, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("ரத்து செய்", color = mauveHeader, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
 
                 Button(
@@ -1138,8 +1255,10 @@ private fun VoiceChatSettingsScreen(
                     modifier = Modifier
                         .weight(1f)
                         .height(50.dp)
-                        .clip(RoundedCornerShape(25.dp)),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7))
+                        .shadow(5.dp, RoundedCornerShape(50.dp), ambientColor = Color(0x33642841))
+                        .clip(RoundedCornerShape(50.dp))
+                        .background(buttonGradient),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
                 ) {
                     Text("சேமி (Save)", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
@@ -1149,38 +1268,43 @@ private fun VoiceChatSettingsScreen(
 }
 
 @Composable
-private fun LanguageRadioRow(label: String, isSelected: Boolean, onClick: () -> Unit) {
+private fun LanguageRadioRow(label: String, isSelected: Boolean, accentColor: Color, textColor: Color, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(vertical = 4.dp),
+            .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        RadioButton(selected = isSelected, onClick = onClick)
+        RadioButton(
+            selected = isSelected,
+            onClick = onClick,
+            colors = RadioButtonDefaults.colors(selectedColor = accentColor)
+        )
         Spacer(modifier = Modifier.width(8.dp))
-        Text(text = label, color = Color.White, fontSize = 13.sp)
+        Text(text = label, color = textColor, fontSize = 14.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
     }
 }
 
 @Composable
 private fun RowScope.SpeedButton(label: String, isSelected: Boolean, onClick: () -> Unit) {
-    Surface(
+    Box(
         modifier = Modifier
             .weight(1f)
             .height(38.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .clickable { onClick() },
-        color = if (isSelected) Color(0xFF0284C7) else Color(0xFF1E293B)
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = label,
-                fontSize = 12.sp,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                color = if (isSelected) Color.White else Color.LightGray
+            .clip(RoundedCornerShape(22.dp))
+            .background(
+                if (isSelected) Color(0xFFB45B80) else Color.Transparent
             )
-        }
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+            color = if (isSelected) Color.White else Color(0xFF7D405D)
+        )
     }
 }
 
@@ -1195,6 +1319,15 @@ private fun ActiveListeningScreen(
     onTextInput: () -> Unit,
     onBack: () -> Unit
 ) {
+    val mauveHeader = Color(0xFF7D405D)
+    val roseGoldAccent = Color(0xFFB45B80)
+    val mauveDeep = Color(0xFF633249)
+    val deepTextColor = Color(0xFF2E1A23)
+    val mutedTextColor = Color(0xFF5A3A4A)
+    val buttonGradient = Brush.linearGradient(
+        colors = listOf(Color(0xFF85405F), Color(0xFF71334F))
+    )
+
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 0.95f,
@@ -1223,32 +1356,33 @@ private fun ActiveListeningScreen(
                 modifier = Modifier
                     .size(42.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.08f))
+                    .background(Color.White.copy(alpha = 0.85f))
+                    .border(BorderStroke(1.dp, mauveHeader.copy(alpha = 0.25f)), CircleShape)
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = mauveHeader)
             }
 
             Surface(
-                color = Color(0xFF064E3B).copy(alpha = 0.5f),
-                shape = RoundedCornerShape(20.dp),
-                border = BorderStroke(1.dp, Color(0xFF10B981))
+                color = Color.White.copy(alpha = 0.18f),
+                shape = RoundedCornerShape(28.dp),
+                border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f))
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
                             .size(8.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF10B981))
+                            .background(roseGoldAccent)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "${provider.displayName} ● Online",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = deepTextColor
                     )
                 }
             }
@@ -1267,8 +1401,8 @@ private fun ActiveListeningScreen(
                 .background(
                     Brush.radialGradient(
                         colors = listOf(
-                            Color(0xFF00B4D8).copy(alpha = 0.4f),
-                            Color(0xFF0077B6).copy(alpha = 0.15f),
+                            roseGoldAccent.copy(alpha = 0.35f),
+                            roseGoldAccent.copy(alpha = 0.12f),
                             Color.Transparent
                         )
                     )
@@ -1279,8 +1413,8 @@ private fun ActiveListeningScreen(
                 modifier = Modifier
                     .size(90.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF0284C7))
-                    .shadow(16.dp, CircleShape),
+                    .background(buttonGradient)
+                    .shadow(12.dp, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -1298,13 +1432,13 @@ private fun ActiveListeningScreen(
             text = "Listening...",
             fontSize = 22.sp,
             fontWeight = FontWeight.ExtraBold,
-            color = Color.White
+            color = mauveDeep
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = "தயவுசெய்து பேசுங்கள்...",
             fontSize = 14.sp,
-            color = Color(0xFF90E0EF)
+            color = mutedTextColor
         )
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -1321,7 +1455,7 @@ private fun ActiveListeningScreen(
                         .width(4.dp)
                         .height((h * pulseScale).dp)
                         .clip(RoundedCornerShape(2.dp))
-                        .background(Color(0xFF00B4D8))
+                        .background(roseGoldAccent)
                 )
             }
         }
@@ -1340,19 +1474,21 @@ private fun ActiveListeningScreen(
                 modifier = Modifier
                     .size(54.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFEF4444).copy(alpha = 0.2f))
+                    .background(Color.White.copy(alpha = 0.85f))
+                    .border(BorderStroke(1.5.dp, Color(0xFFEF4444).copy(alpha = 0.5f)), CircleShape)
             ) {
-                Icon(Icons.Default.Stop, contentDescription = "Stop", tint = Color(0xFFEF4444))
+                Icon(Icons.Default.Stop, contentDescription = "Stop", tint = Color(0xFFEF4444), modifier = Modifier.size(26.dp))
             }
 
             IconButton(
                 onClick = onSpeakAgain,
                 modifier = Modifier
-                    .size(60.dp)
+                    .size(62.dp)
+                    .shadow(6.dp, CircleShape, ambientColor = Color(0x33642841))
                     .clip(CircleShape)
-                    .background(Color(0xFF0284C7))
+                    .background(buttonGradient)
             ) {
-                Icon(Icons.Default.Mic, contentDescription = "Speak Again", tint = Color.White, modifier = Modifier.size(28.dp))
+                Icon(Icons.Default.Mic, contentDescription = "Speak Again", tint = Color.White, modifier = Modifier.size(30.dp))
             }
 
             IconButton(
@@ -1360,9 +1496,10 @@ private fun ActiveListeningScreen(
                 modifier = Modifier
                     .size(54.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.1f))
+                    .background(Color.White.copy(alpha = 0.85f))
+                    .border(BorderStroke(1.dp, mauveHeader.copy(alpha = 0.25f)), CircleShape)
             ) {
-                Icon(Icons.Default.Keyboard, contentDescription = "Text Input", tint = Color.White)
+                Icon(Icons.Default.Keyboard, contentDescription = "Text Input", tint = mauveHeader, modifier = Modifier.size(24.dp))
             }
         }
     }
@@ -1386,7 +1523,14 @@ private fun ChatConversationScreen(
     onBack: () -> Unit
 ) {
     val listState = rememberLazyListState()
-    val cyanAccent = Color(0xFF00B4D8)
+    val mauveHeader = Color(0xFF7D405D)
+    val roseGoldAccent = Color(0xFFB45B80)
+    val mauveDeep = Color(0xFF633249)
+    val deepTextColor = Color(0xFF2E1A23)
+    val mutedTextColor = Color(0xFF5A3A4A)
+    val buttonGradient = Brush.linearGradient(
+        colors = listOf(Color(0xFF85405F), Color(0xFF71334F))
+    )
 
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
@@ -1407,30 +1551,31 @@ private fun ChatConversationScreen(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.08f))
+                    .background(Color.White.copy(alpha = 0.85f))
+                    .border(BorderStroke(1.dp, mauveHeader.copy(alpha = 0.25f)), CircleShape)
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = mauveHeader)
             }
 
             Spacer(modifier = Modifier.width(12.dp))
 
             Surface(
-                color = Color(0xFF064E3B).copy(alpha = 0.5f),
-                shape = RoundedCornerShape(20.dp),
-                border = BorderStroke(1.dp, Color(0xFF10B981)),
+                color = Color.White.copy(alpha = 0.18f),
+                shape = RoundedCornerShape(28.dp),
+                border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)),
                 modifier = Modifier.weight(1f)
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF10B981)))
+                    Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(roseGoldAccent))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "${provider.displayName} ● Online",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = deepTextColor
                     )
                 }
             }
@@ -1442,9 +1587,10 @@ private fun ChatConversationScreen(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.08f))
+                    .background(Color.White.copy(alpha = 0.85f))
+                    .border(BorderStroke(1.dp, mauveHeader.copy(alpha = 0.25f)), CircleShape)
             ) {
-                Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.White)
+                Icon(Icons.Default.Settings, contentDescription = "Settings", tint = mauveHeader)
             }
         }
 
@@ -1459,36 +1605,45 @@ private fun ChatConversationScreen(
         ) {
             items(messages, key = { it.id }) { msg ->
                 if (msg.sender == "user") {
-                    // User Speech Bubble (Right aligned)
+                    // User Speech Bubble (Right aligned with gradient)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End
                     ) {
                         Surface(
-                            color = Color(0xFF0284C7),
-                            shape = RoundedCornerShape(16.dp, 16.dp, 4.dp, 16.dp),
-                            modifier = Modifier.widthIn(max = 280.dp)
+                            shape = RoundedCornerShape(28.dp, 28.dp, 4.dp, 28.dp),
+                            modifier = Modifier
+                                .widthIn(max = 280.dp)
+                                .shadow(4.dp, RoundedCornerShape(28.dp, 28.dp, 4.dp, 28.dp), ambientColor = Color(0x33642841)),
+                            color = Color.Transparent
                         ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Text(
-                                    text = msg.text,
-                                    fontSize = 14.sp,
-                                    color = Color.White,
-                                    lineHeight = 20.sp
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "You • ${msg.timestamp}",
-                                    fontSize = 10.sp,
-                                    color = Color.White.copy(alpha = 0.7f),
-                                    textAlign = TextAlign.End,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
+                            Box(
+                                modifier = Modifier
+                                    .background(buttonGradient)
+                                    .padding(14.dp)
+                            ) {
+                                Column {
+                                    Text(
+                                        text = msg.text,
+                                        fontSize = 14.sp,
+                                        color = Color.White,
+                                        lineHeight = 20.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "You • ${msg.timestamp}",
+                                        fontSize = 10.sp,
+                                        color = Color.White.copy(alpha = 0.8f),
+                                        textAlign = TextAlign.End,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
                             }
                         }
                     }
                 } else {
-                    // AI Response Bubble (Left aligned)
+                    // AI Response Bubble (.inner-text-box: alpha 0.18f, border 1.5px, radius 28dp)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Start
@@ -1497,7 +1652,7 @@ private fun ChatConversationScreen(
                             modifier = Modifier
                                 .size(34.dp)
                                 .clip(CircleShape)
-                                .background(if (provider == AiProvider.GEMINI) cyanAccent else Color(0xFF10B981)),
+                                .background(buttonGradient),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -1511,25 +1666,27 @@ private fun ChatConversationScreen(
                         Spacer(modifier = Modifier.width(8.dp))
 
                         Surface(
-                            color = Color(0xFF0B172B),
-                            shape = RoundedCornerShape(16.dp, 16.dp, 16.dp, 4.dp),
-                            border = BorderStroke(1.dp, Color(0xFF0284C7).copy(alpha = 0.4f)),
+                            color = Color.White.copy(alpha = 0.18f),
+                            shape = RoundedCornerShape(28.dp, 28.dp, 28.dp, 4.dp),
+                            border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)),
                             modifier = Modifier.widthIn(max = 300.dp)
                         ) {
                             Column(modifier = Modifier.padding(14.dp)) {
                                 Text(
                                     text = msg.text,
                                     fontSize = 14.sp,
-                                    color = Color(0xFFE2E8F0),
-                                    lineHeight = 21.sp
+                                    color = deepTextColor,
+                                    lineHeight = 21.sp,
+                                    fontWeight = FontWeight.Medium
                                 )
 
                                 Spacer(modifier = Modifier.height(10.dp))
 
-                                // Audio Player Bar matching Screenshot 5 & 6
+                                // Audio Player Bar (.language-tabs style)
                                 Surface(
-                                    color = Color(0xFF030712),
-                                    shape = RoundedCornerShape(20.dp),
+                                    color = Color.White.copy(alpha = 0.15f),
+                                    shape = RoundedCornerShape(28.dp),
+                                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.20f)),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Row(
@@ -1547,7 +1704,7 @@ private fun ChatConversationScreen(
                                             Icon(
                                                 imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                                 contentDescription = "Play/Pause",
-                                                tint = cyanAccent,
+                                                tint = roseGoldAccent,
                                                 modifier = Modifier.size(18.dp)
                                             )
                                         }
@@ -1555,7 +1712,7 @@ private fun ChatConversationScreen(
                                         Text(
                                             text = if (isPlaying) "0:10 / 0:15" else "0:00 / 0:15",
                                             fontSize = 11.sp,
-                                            color = Color.LightGray
+                                            color = mutedTextColor
                                         )
 
                                         Spacer(modifier = Modifier.weight(1f))
@@ -1563,7 +1720,7 @@ private fun ChatConversationScreen(
                                         Icon(
                                             imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                                             contentDescription = null,
-                                            tint = cyanAccent,
+                                            tint = roseGoldAccent,
                                             modifier = Modifier.size(16.dp)
                                         )
                                     }
@@ -1574,7 +1731,7 @@ private fun ChatConversationScreen(
                                 Text(
                                     text = "${provider.displayName} • ${msg.timestamp}",
                                     fontSize = 10.sp,
-                                    color = Color.Gray
+                                    color = mutedTextColor
                                 )
                             }
                         }
@@ -1588,21 +1745,24 @@ private fun ChatConversationScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = cyanAccent)
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = roseGoldAccent)
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
                             text = "${provider.displayName} பதில் தயாரிக்கிறது...",
                             fontSize = 12.sp,
-                            color = Color.LightGray
+                            color = mutedTextColor,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
             }
         }
 
-        // Bottom Action Toolbar matching Collage (மைக், நிறுத்து, மீண்டும் கேள், உரை)
+        // Bottom Action Toolbar matching CSS (.result-card / .language-tabs)
         Surface(
-            color = Color(0xFF070F1E),
+            color = Color.White.copy(alpha = 0.12f),
+            shape = RoundedCornerShape(32.dp, 32.dp, 0.dp, 0.dp),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.20f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
@@ -1617,13 +1777,15 @@ private fun ChatConversationScreen(
                     IconButton(
                         onClick = onMicClick,
                         modifier = Modifier
-                            .size(50.dp)
+                            .size(52.dp)
+                            .shadow(6.dp, CircleShape, ambientColor = Color(0x33642841))
                             .clip(CircleShape)
-                            .background(Color(0xFF0284C7))
+                            .background(buttonGradient)
                     ) {
                         Icon(Icons.Default.Mic, contentDescription = "Mic", tint = Color.White)
                     }
-                    Text("மைக்", fontSize = 10.sp, color = Color.White)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text("மைக்", fontSize = 11.sp, color = deepTextColor, fontWeight = FontWeight.Bold)
                 }
 
                 // Stop
@@ -1633,11 +1795,13 @@ private fun ChatConversationScreen(
                         modifier = Modifier
                             .size(46.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFEF4444).copy(alpha = 0.2f))
+                            .background(Color.White.copy(alpha = 0.85f))
+                            .border(BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f)), CircleShape)
                     ) {
                         Icon(Icons.Default.Stop, contentDescription = "Stop", tint = Color(0xFFEF4444))
                     }
-                    Text("நிறுத்து", fontSize = 10.sp, color = Color.LightGray)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text("நிறுத்து", fontSize = 11.sp, color = deepTextColor)
                 }
 
                 // Replay
@@ -1650,11 +1814,13 @@ private fun ChatConversationScreen(
                         modifier = Modifier
                             .size(46.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.1f))
+                            .background(Color.White.copy(alpha = 0.85f))
+                            .border(BorderStroke(1.dp, mauveHeader.copy(alpha = 0.25f)), CircleShape)
                     ) {
-                        Icon(Icons.Default.Replay, contentDescription = "Replay", tint = Color.White)
+                        Icon(Icons.Default.Replay, contentDescription = "Replay", tint = mauveHeader)
                     }
-                    Text("மீண்டும் கேள்", fontSize = 10.sp, color = Color.LightGray)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text("மீண்டும் கேள்", fontSize = 11.sp, color = deepTextColor)
                 }
 
                 // Text
@@ -1664,11 +1830,13 @@ private fun ChatConversationScreen(
                         modifier = Modifier
                             .size(46.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.1f))
+                            .background(Color.White.copy(alpha = 0.85f))
+                            .border(BorderStroke(1.dp, mauveHeader.copy(alpha = 0.25f)), CircleShape)
                     ) {
-                        Icon(Icons.Default.Keyboard, contentDescription = "Text", tint = Color.White)
+                        Icon(Icons.Default.Keyboard, contentDescription = "Text", tint = mauveHeader)
                     }
-                    Text("உரை", fontSize = 10.sp, color = Color.LightGray)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text("உரை", fontSize = 11.sp, color = deepTextColor)
                 }
             }
         }
@@ -1684,6 +1852,14 @@ private fun StoppedSessionScreen(
     onViewChat: () -> Unit,
     onBack: () -> Unit
 ) {
+    val mauveHeader = Color(0xFF7D405D)
+    val roseGoldAccent = Color(0xFFB45B80)
+    val mauveDeep = Color(0xFF633249)
+    val deepTextColor = Color(0xFF2E1A23)
+    val buttonGradient = Brush.linearGradient(
+        colors = listOf(Color(0xFF85405F), Color(0xFF71334F))
+    )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -1696,27 +1872,28 @@ private fun StoppedSessionScreen(
                 modifier = Modifier
                     .size(42.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.08f))
+                    .background(Color.White.copy(alpha = 0.85f))
+                    .border(BorderStroke(1.dp, mauveHeader.copy(alpha = 0.25f)), CircleShape)
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = mauveHeader)
             }
         }
 
         Spacer(modifier = Modifier.weight(0.8f))
 
-        // Checkmark Icon
+        // Checkmark Icon (.inner-text-box)
         Box(
             modifier = Modifier
                 .size(90.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF064E3B).copy(alpha = 0.4f))
-                .border(BorderStroke(2.dp, Color(0xFF10B981)), CircleShape),
+                .background(Color.White.copy(alpha = 0.18f))
+                .border(BorderStroke(2.dp, roseGoldAccent), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Check,
                 contentDescription = "Stopped",
-                tint = Color(0xFF10B981),
+                tint = roseGoldAccent,
                 modifier = Modifier.size(44.dp)
             )
         }
@@ -1727,7 +1904,7 @@ private fun StoppedSessionScreen(
             text = "பதிவு நிறுத்தப்பட்டது",
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.White
+            color = mauveDeep
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -1735,7 +1912,7 @@ private fun StoppedSessionScreen(
         Text(
             text = "மீண்டும் பேச விரும்பினால் மைக் பொத்தானை அழுத்தவும்.",
             fontSize = 13.sp,
-            color = Color.LightGray,
+            color = deepTextColor,
             textAlign = TextAlign.Center
         )
 
@@ -1746,8 +1923,10 @@ private fun StoppedSessionScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp)
-                .clip(RoundedCornerShape(26.dp)),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7))
+                .shadow(5.dp, RoundedCornerShape(50.dp), ambientColor = Color(0x33642841))
+                .clip(RoundedCornerShape(50.dp))
+                .background(buttonGradient),
+            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
         ) {
             Icon(Icons.Default.Mic, contentDescription = null, tint = Color.White)
             Spacer(modifier = Modifier.width(8.dp))
@@ -1760,10 +1939,11 @@ private fun StoppedSessionScreen(
             onClick = onViewChat,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp),
-            shape = RoundedCornerShape(24.dp)
+                .height(50.dp),
+            shape = RoundedCornerShape(50.dp),
+            border = BorderStroke(1.5.dp, mauveHeader)
         ) {
-            Text("உரையாடலைப் பார்க்க (View Chat)", color = Color(0xFF00B4D8))
+            Text("உரையாடலைப் பார்க்க (View Chat)", color = mauveHeader, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -1776,6 +1956,12 @@ private fun VoiceHistoryScreen(
     onBack: () -> Unit,
     onSelectHistory: (String) -> Unit
 ) {
+    val mauveHeader = Color(0xFF7D405D)
+    val roseGoldAccent = Color(0xFFB45B80)
+    val mauveDeep = Color(0xFF633249)
+    val deepTextColor = Color(0xFF2E1A23)
+    val mutedTextColor = Color(0xFF5A3A4A)
+
     var historyTab by remember { mutableStateOf(AiProvider.CHATGPT) }
 
     val chatGptHistory = listOf(
@@ -1804,46 +1990,50 @@ private fun VoiceHistoryScreen(
                 modifier = Modifier
                     .size(42.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.08f))
+                    .background(Color.White.copy(alpha = 0.85f))
+                    .border(BorderStroke(1.dp, mauveHeader.copy(alpha = 0.25f)), CircleShape)
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = mauveHeader)
             }
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = "Voice Chat History",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = mauveDeep
             )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Tabs
+        // Tabs (.language-tabs: radius 28dp, border 1px rgba(255,255,255,0.20), active: #b45b80)
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(28.dp))
+                .background(Color.White.copy(alpha = 0.10f))
+                .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.20f)), RoundedCornerShape(28.dp))
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Button(
-                onClick = { historyTab = AiProvider.CHATGPT },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (historyTab == AiProvider.CHATGPT) Color(0xFF0284C7) else Color(0xFF1E293B)
-                ),
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("ChatGPT")
-            }
-
-            Button(
-                onClick = { historyTab = AiProvider.GEMINI },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (historyTab == AiProvider.GEMINI) Color(0xFF0284C7) else Color(0xFF1E293B)
-                ),
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Gemini")
+            listOf(AiProvider.CHATGPT to "ChatGPT", AiProvider.GEMINI to "Gemini").forEach { (prov, label) ->
+                val isSelected = historyTab == prov
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(if (isSelected) roseGoldAccent else Color.Transparent)
+                        .clickable { historyTab = prov }
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = label,
+                        fontSize = 13.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSelected) Color.White else mauveHeader
+                    )
+                }
             }
         }
 
@@ -1855,23 +2045,25 @@ private fun VoiceHistoryScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .shadow(4.dp, RoundedCornerShape(28.dp), ambientColor = Color(0x1A50323C))
+                        .border(BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)), RoundedCornerShape(28.dp))
                         .clickable { onSelectHistory(title) },
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0B172B)),
-                    shape = RoundedCornerShape(12.dp)
+                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.10f)),
+                    shape = RoundedCornerShape(28.dp)
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(14.dp),
+                            .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.PlayCircle, contentDescription = null, tint = Color(0xFF00B4D8), modifier = Modifier.size(32.dp))
+                        Icon(Icons.Default.PlayCircle, contentDescription = null, tint = roseGoldAccent, modifier = Modifier.size(32.dp))
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                            Text(text = date, fontSize = 11.sp, color = Color.Gray)
+                            Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = deepTextColor)
+                            Text(text = date, fontSize = 11.sp, color = mutedTextColor)
                         }
-                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = mauveHeader, modifier = Modifier.size(16.dp))
                     }
                 }
             }

@@ -105,8 +105,8 @@ fun ImageToTextScreen(
     val deepTextColor = Color(0xFF2E1A23)
     val mutedTextColor = Color(0xFF5A3A4A)
 
-    // Attached image fixed screen background (School Supplies theme)
-    val backgroundRes = R.drawable.bg_school_supplies
+    // Attached image fixed screen background (Image 1: Sakura Petals theme)
+    val backgroundRes = R.drawable.bg_sakura_petals
 
     // Text to Speech
     var ttsEngine by remember { mutableStateOf<TextToSpeech?>(null) }
@@ -772,7 +772,7 @@ private fun BookImagePreviewCard(
                     .fillMaxWidth()
                     .heightIn(min = 190.dp)
                     .clip(RoundedCornerShape(28.dp))
-                    .background(Color.White.copy(alpha = 0.10f))
+                    .background(Color.White.copy(alpha = 0.18f))
                     .border(BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)), RoundedCornerShape(28.dp))
                     .padding(16.dp),
                 contentAlignment = Alignment.Center
@@ -1015,7 +1015,7 @@ private fun ExtractedTextTabContent(
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             ocrResult.paragraphs.forEachIndexed { index, paragraph ->
                 Surface(
-                    color = Color.White.copy(alpha = 0.10f),
+                    color = Color.White.copy(alpha = 0.18f),
                     shape = RoundedCornerShape(28.dp),
                     border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)),
                     modifier = Modifier.fillMaxWidth()
@@ -1121,7 +1121,7 @@ private fun KeyWordsTabContent(
                     .fillMaxWidth()
                     .padding(vertical = 6.dp)
                     .clip(RoundedCornerShape(28.dp))
-                    .background(Color.White.copy(alpha = 0.10f))
+                    .background(Color.White.copy(alpha = 0.18f))
                     .border(BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)), RoundedCornerShape(28.dp))
                     .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -1266,7 +1266,7 @@ private fun ExplanationTabContent(
 
         explanation.paragraphsExplanation.forEach { item ->
             Surface(
-                color = Color.White.copy(alpha = 0.10f),
+                color = Color.White.copy(alpha = 0.18f),
                 shape = RoundedCornerShape(28.dp),
                 border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)),
                 modifier = Modifier
@@ -1287,7 +1287,7 @@ private fun ExplanationTabContent(
 
         // Practical Application
         Surface(
-            color = Color.White.copy(alpha = 0.10f),
+            color = Color.White.copy(alpha = 0.18f),
             shape = RoundedCornerShape(28.dp),
             border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)),
             modifier = Modifier.fillMaxWidth()
@@ -1364,7 +1364,7 @@ private fun TamilTranslationTabContent(
         )
 
         Surface(
-            color = Color.White.copy(alpha = 0.10f),
+            color = Color.White.copy(alpha = 0.18f),
             shape = RoundedCornerShape(28.dp),
             border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)),
             modifier = Modifier.fillMaxWidth()

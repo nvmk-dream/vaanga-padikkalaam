@@ -87,8 +87,13 @@ fun SubikshaApp() {
                 }
             },
             modifier = Modifier.fillMaxSize()
-        ) { _ ->
-            when (currentScreen) {
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = innerPadding.calculateBottomPadding())
+            ) {
+                when (currentScreen) {
                 "home" -> {
                     HomeScreenWrapper(
                         onNavigate = { screen -> navigateTo(screen) },
@@ -170,6 +175,7 @@ fun SubikshaApp() {
                     )
                 }
             }
+        }
         }
     }
 }

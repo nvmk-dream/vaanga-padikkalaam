@@ -154,4 +154,16 @@ class ApiKeyManager(context: Context) {
     fun isCustomKey(): Boolean {
         return !prefs.getString("gemini_api_key", "").isNullOrBlank()
     }
+
+    fun getCustomProfileUri(): String? {
+        return prefs.getString("custom_profile_uri", null)
+    }
+
+    fun saveCustomProfileUri(uriString: String?) {
+        if (uriString == null) {
+            prefs.edit().remove("custom_profile_uri").apply()
+        } else {
+            prefs.edit().putString("custom_profile_uri", uriString).apply()
+        }
+    }
 }

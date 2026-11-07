@@ -100,8 +100,8 @@ fun ImageToTextScreen(
     val buttonGradient = Brush.linearGradient(
         colors = listOf(Color(0xFF85405F), Color(0xFF71334F)) // CSS: linear-gradient(135deg, #85405f, #71334f)
     )
-    val glassCardBackground = Color.White.copy(alpha = 0.10f) // CSS: rgba(255, 255, 255, 0.10)
-    val glassBorder = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)) // CSS: 1.5px solid rgba(255,255,255,0.20)
+    val glassCardBackground = Color.White.copy(alpha = 0.08f)
+    val glassBorder = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.30f))
     val deepTextColor = Color(0xFF2E1A23)
     val mutedTextColor = Color(0xFF5A3A4A)
 
@@ -262,21 +262,7 @@ fun ImageToTextScreen(
             contentScale = ContentScale.Crop
         )
 
-        // Semi-transparent frosted glass gradient overlay for high contrast and readability
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.25f),
-                            Color(0xFFFFF0F5).copy(alpha = 0.40f)
-                        )
-                    )
-                )
-        )
-
-        // Z-Index: 2 - Floating UI Scaffold
+        // Z-Index: 2 - Floating UI Scaffold (No dense overlay so wallpaper is 100% sharp and clear)
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = Color.Transparent
@@ -290,7 +276,7 @@ fun ImageToTextScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
@@ -392,8 +378,8 @@ fun ImageToTextScreen(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 2.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     // Scanner Mode Switch (⚡ Gemini AI vs 📱 ML Kit)
                     item {
@@ -450,12 +436,11 @@ fun ImageToTextScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .shadow(6.dp, RoundedCornerShape(32.dp), ambientColor = Color(0x1A50323C))
-                                .border(glassBorder, RoundedCornerShape(32.dp)),
+                                .border(glassBorder, RoundedCornerShape(20.dp)),
                             colors = CardDefaults.cardColors(containerColor = glassCardBackground),
-                            shape = RoundedCornerShape(32.dp)
+                            shape = RoundedCornerShape(20.dp)
                         ) {
-                            Box(modifier = Modifier.padding(18.dp)) {
+                            Box(modifier = Modifier.padding(4.dp)) {
                                 when (selectedTab) {
                                     OcrTab.EXTRACTED_TEXT -> {
                                         ExtractedTextTabContent(
@@ -512,7 +497,7 @@ fun ImageToTextScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                        .padding(horizontal = 4.dp, vertical = 4.dp)
                 ) {
                     Button(
                         onClick = {
@@ -698,23 +683,23 @@ private fun ScannerEngineSwitch(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp))
-            .background(Color.White.copy(alpha = 0.10f))
-            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.20f)), RoundedCornerShape(28.dp))
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color.White.copy(alpha = 0.08f))
+            .border(BorderStroke(0.5.dp, Color.White.copy(alpha = 0.30f)), RoundedCornerShape(20.dp))
+            .padding(2.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         ScannerEngine.values().forEach { engine ->
             val isSelected = engine == selectedEngine
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(22.dp))
+                    .clip(RoundedCornerShape(16.dp))
                     .background(
                         if (isSelected) buttonGradient else Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
                     )
                     .clickable { onEngineSelected(engine) }
-                    .padding(vertical = 8.dp),
+                    .padding(vertical = 6.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -757,30 +742,29 @@ private fun BookImagePreviewCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(6.dp, RoundedCornerShape(32.dp), ambientColor = Color(0x1A50323C))
-            .border(BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)), RoundedCornerShape(32.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.10f)),
-        shape = RoundedCornerShape(32.dp)
+            .border(BorderStroke(0.5.dp, Color.White.copy(alpha = 0.30f)), RoundedCornerShape(20.dp)),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.08f)),
+        shape = RoundedCornerShape(20.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
+                .padding(4.dp)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 190.dp)
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(Color.White.copy(alpha = 0.18f))
-                    .border(BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)), RoundedCornerShape(28.dp))
-                    .padding(16.dp),
+                    .heightIn(min = 120.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color.White.copy(alpha = 0.12f))
+                    .border(BorderStroke(0.5.dp, Color.White.copy(alpha = 0.30f)), RoundedCornerShape(16.dp))
+                    .padding(6.dp),
                 contentAlignment = Alignment.Center
             ) {
                 if (isProcessing) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator(color = mauveHeader)
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = processingStatus,
                             fontSize = 13.sp,
@@ -795,43 +779,43 @@ private fun BookImagePreviewCard(
                         contentDescription = "Selected Book Image",
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 180.dp, max = 260.dp)
-                            .clip(RoundedCornerShape(16.dp)),
+                            .heightIn(min = 160.dp, max = 240.dp)
+                            .clip(RoundedCornerShape(12.dp)),
                         contentScale = ContentScale.Fit
                     )
                 } else {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Text(
                             text = ocrResult.originalHeading,
-                            fontSize = 17.sp,
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.ExtraBold,
                             fontFamily = FontFamily.Serif,
                             color = deepTextColor,
-                            lineHeight = 22.sp
+                            lineHeight = 21.sp
                         )
 
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
                         ocrResult.paragraphs.forEach { paragraph ->
                             Text(
                                 text = paragraph,
-                                fontSize = 14.sp,
+                                fontSize = 13.sp,
                                 fontFamily = FontFamily.Serif,
                                 color = deepTextColor.copy(alpha = 0.90f),
-                                lineHeight = 20.sp,
-                                modifier = Modifier.padding(vertical = 3.dp)
+                                lineHeight = 19.sp,
+                                modifier = Modifier.padding(vertical = 2.dp)
                             )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp),
+                    .padding(horizontal = 2.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -846,51 +830,49 @@ private fun BookImagePreviewCard(
                 )
 
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
                         onClick = onCameraClick,
                         modifier = Modifier
-                            .height(38.dp)
-                            .shadow(5.dp, RoundedCornerShape(50.dp), ambientColor = Color(0x1A642841))
+                            .height(34.dp)
                             .clip(RoundedCornerShape(50.dp))
                             .background(buttonGradient)
                             .testTag("ocr_camera_btn"),
                         shape = RoundedCornerShape(50.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.PhotoCamera,
                             contentDescription = "Camera",
                             tint = Color.White,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(15.dp)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Camera", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Camera", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
                     }
 
                     Button(
                         onClick = onGalleryClick,
                         modifier = Modifier
-                            .height(38.dp)
-                            .shadow(5.dp, RoundedCornerShape(50.dp), ambientColor = Color(0x1A642841))
+                            .height(34.dp)
                             .clip(RoundedCornerShape(50.dp))
                             .background(buttonGradient)
                             .testTag("ocr_gallery_btn"),
                         shape = RoundedCornerShape(50.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.PhotoLibrary,
                             contentDescription = "Gallery",
                             tint = Color.White,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(15.dp)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Gallery", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Gallery", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -908,10 +890,10 @@ private fun OcrTabsRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp))
-            .background(Color.White.copy(alpha = 0.10f))
-            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.20f)), RoundedCornerShape(28.dp))
-            .padding(4.dp),
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color.White.copy(alpha = 0.08f))
+            .border(BorderStroke(0.5.dp, Color.White.copy(alpha = 0.30f)), RoundedCornerShape(20.dp))
+            .padding(2.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         OcrTab.values().forEach { tab ->
@@ -919,17 +901,17 @@ private fun OcrTabsRow(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(22.dp))
+                    .clip(RoundedCornerShape(16.dp))
                     .background(
                         if (isSelected) Color(0xFFB45B80) else Color.Transparent
                     )
                     .clickable { onTabSelected(tab) }
-                    .padding(vertical = 10.dp),
+                    .padding(vertical = 6.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = tab.title,
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                     color = if (isSelected) Color.White else textColor,
                     textAlign = TextAlign.Center,
@@ -1009,19 +991,19 @@ private fun ExtractedTextTabContent(
 
         HorizontalDivider(
             color = accentColor.copy(alpha = 0.15f),
-            modifier = Modifier.padding(vertical = 12.dp)
+            modifier = Modifier.padding(vertical = 4.dp)
         )
 
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             ocrResult.paragraphs.forEachIndexed { index, paragraph ->
                 Surface(
-                    color = Color.White.copy(alpha = 0.18f),
-                    shape = RoundedCornerShape(28.dp),
-                    border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)),
+                    color = Color.White.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.30f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(6.dp),
                         verticalAlignment = Alignment.Top
                     ) {
                         Surface(
@@ -1095,15 +1077,16 @@ private fun KeyWordsTabContent(
 
             OutlinedButton(
                 onClick = onSpeakAll,
-                modifier = Modifier.height(34.dp),
+                modifier = Modifier.height(30.dp),
                 shape = RoundedCornerShape(8.dp),
-                border = BorderStroke(1.dp, accentColor)
+                border = BorderStroke(0.5.dp, accentColor),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                     contentDescription = null,
                     tint = accentColor,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(14.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text("Listen All", fontSize = 11.sp, color = accentColor, fontWeight = FontWeight.Bold)
@@ -1112,18 +1095,18 @@ private fun KeyWordsTabContent(
 
         HorizontalDivider(
             color = accentColor.copy(alpha = 0.15f),
-            modifier = Modifier.padding(vertical = 12.dp)
+            modifier = Modifier.padding(vertical = 4.dp)
         )
 
         keyWords.forEach { word ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 6.dp)
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(Color.White.copy(alpha = 0.18f))
-                    .border(BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)), RoundedCornerShape(28.dp))
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                    .padding(vertical = 2.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color.White.copy(alpha = 0.12f))
+                    .border(BorderStroke(0.5.dp, Color.White.copy(alpha = 0.30f)), RoundedCornerShape(16.dp))
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
@@ -1266,40 +1249,40 @@ private fun ExplanationTabContent(
 
         explanation.paragraphsExplanation.forEach { item ->
             Surface(
-                color = Color.White.copy(alpha = 0.18f),
-                shape = RoundedCornerShape(28.dp),
-                border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)),
+                color = Color.White.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.30f)),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 3.dp)
+                    .padding(vertical = 2.dp)
             ) {
                 Text(
                     text = item,
                     fontSize = 13.sp,
                     color = deepTextColor,
-                    lineHeight = 19.sp,
-                    modifier = Modifier.padding(14.dp)
+                    lineHeight = 18.sp,
+                    modifier = Modifier.padding(8.dp)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         // Practical Application
         Surface(
-            color = Color.White.copy(alpha = 0.18f),
-            shape = RoundedCornerShape(28.dp),
-            border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)),
+            color = Color.White.copy(alpha = 0.12f),
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.30f)),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(modifier = Modifier.padding(14.dp)) {
+            Column(modifier = Modifier.padding(8.dp)) {
                 Text(
                     text = "🌱 அன்றாட வாழ்வில் பயன்பாடு:",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = accentColor
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = explanation.practicalApplication,
                     fontSize = 12.sp,
@@ -1360,22 +1343,22 @@ private fun TamilTranslationTabContent(
 
         HorizontalDivider(
             color = accentColor.copy(alpha = 0.15f),
-            modifier = Modifier.padding(vertical = 12.dp)
+            modifier = Modifier.padding(vertical = 4.dp)
         )
 
         Surface(
-            color = Color.White.copy(alpha = 0.18f),
-            shape = RoundedCornerShape(28.dp),
-            border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.20f)),
+            color = Color.White.copy(alpha = 0.12f),
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.30f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
                 text = translation,
                 fontSize = 15.sp,
                 color = deepTextColor,
-                lineHeight = 24.sp,
+                lineHeight = 22.sp,
                 fontWeight = FontWeight.Normal,
-                modifier = Modifier.padding(14.dp)
+                modifier = Modifier.padding(8.dp)
             )
         }
     }

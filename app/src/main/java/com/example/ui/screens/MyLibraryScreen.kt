@@ -7,10 +7,14 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -95,18 +99,22 @@ fun MyLibraryScreen(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFFF7F5FF),
-                        Color(0xFFECE7FE),
-                        Color(0xFFF5F3FF)
-                    )
-                )
-            )
+        modifier = Modifier.fillMaxSize()
     ) {
+        // Layer 1: Green clover floral wallpaper
+        Image(
+            painter = painterResource(id = R.drawable.bg_library),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+
+        // Semi-transparent overlay to ensure contrast and readability
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White.copy(alpha = 0.05f))
+        )
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -506,16 +514,17 @@ private fun CompactFolderRowCard(
 ) {
     Card(
         modifier = modifier
-            .shadow(2.dp, RoundedCornerShape(14.dp))
-            .clip(RoundedCornerShape(14.dp))
+            .border(BorderStroke(0.5.dp, Color.White.copy(alpha = 0.30f)), RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(16.dp))
             .clickable { onClick() }
             .testTag("folder_card_${folder.id}"),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.08f)),
+        shape = RoundedCornerShape(16.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
+                .background(Color.White.copy(alpha = 0.12f))
                 .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -600,15 +609,17 @@ private fun FolderItemCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(3.dp, RoundedCornerShape(18.dp))
-            .clip(RoundedCornerShape(18.dp))
+            .border(BorderStroke(0.5.dp, Color.White.copy(alpha = 0.30f)), RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(20.dp))
             .clickable { onClick() }
             .testTag("folder_card_${folder.id}"),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.08f)),
+        shape = RoundedCornerShape(20.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(Color.White.copy(alpha = 0.12f))
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {

@@ -183,19 +183,27 @@ fun MentalMathsLibraryScreen(
         books.filter { it.category == selectedCategory }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFFF0FDF4),
-                        Color(0xFFDCFCE7),
-                        Color(0xFFF7FEE7)
-                    )
-                )
-            )
+    Box(
+        modifier = Modifier.fillMaxSize()
     ) {
+        // Layer 1: Mint green and floating lilac petals wallpaper
+        Image(
+            painter = painterResource(id = R.drawable.bg_maths),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+
+        // Semi-transparent overlay to ensure contrast and readability
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White.copy(alpha = 0.05f))
+        )
+
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
         // Sleek Gradient Header with perfectly aligned Avatar & Heading
         Box(
             modifier = Modifier
@@ -335,8 +343,8 @@ fun MentalMathsLibraryScreen(
                     val isSelected = category == selectedCategory
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = if (isSelected) SubikshaRoyalPurple else Color.White,
-                        border = BorderStroke(1.dp, if (isSelected) SubikshaRoyalPurple else Color(0xFFE2E8F0)),
+                        color = if (isSelected) SubikshaRoyalPurple else Color.White.copy(alpha = 0.15f),
+                        border = BorderStroke(0.5.dp, if (isSelected) SubikshaRoyalPurple else Color.White.copy(alpha = 0.30f)),
                         shadowElevation = if (isSelected) 2.dp else 1.dp,
                         modifier = Modifier
                             .weight(1f)
@@ -368,10 +376,9 @@ fun MentalMathsLibraryScreen(
             ) {
                 filteredBooks.forEach { book ->
                     Card(
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.08f)),
+                        border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.30f)),
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f)
@@ -381,6 +388,7 @@ fun MentalMathsLibraryScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxSize()
+                                .background(Color.White.copy(alpha = 0.12f))
                                 .padding(horizontal = 12.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -472,6 +480,7 @@ fun MentalMathsLibraryScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
         }
+    }
     }
 }
 

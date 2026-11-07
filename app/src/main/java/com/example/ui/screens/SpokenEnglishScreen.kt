@@ -3,10 +3,15 @@ package com.example.ui.screens
 import android.speech.tts.TextToSpeech
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -160,18 +165,22 @@ fun SpokenEnglishScreen(
     val selectedChapter = selectedBook?.chapters?.find { it.id == selectedChapterId }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFFF0F9FF),
-                        Color(0xFFE0F2FE),
-                        Color(0xFFF8FAFC)
-                    )
-                )
-            )
+        modifier = Modifier.fillMaxSize()
     ) {
+        // Layer 1: Blue floating water flowers wallpaper
+        Image(
+            painter = painterResource(id = R.drawable.bg_spoken),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+
+        // Semi-transparent overlay to ensure contrast and readability
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White.copy(alpha = 0.05f))
+        )
         when {
             // Level 3: Chapter Detail / Lesson Reader
             selectedBook != null && selectedChapter != null -> {
@@ -366,12 +375,13 @@ private fun BooksOverviewView(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-                    .clip(RoundedCornerShape(18.dp))
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
+                    .border(BorderStroke(0.5.dp, Color.White.copy(alpha = 0.30f)), RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(20.dp))
                     .clickable { onAskGemini("ஆங்கிலத்தில் சரளமாகப் பேச சில எளிய வழிகளைத் தமிழில் சொல்லுங்கள்.") }
                     .testTag("spoken_ai_assistant_card"),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.08f)),
+                shape = RoundedCornerShape(20.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -433,25 +443,19 @@ private fun BookSelectionCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp)
-            .shadow(6.dp, RoundedCornerShape(22.dp))
-            .clip(RoundedCornerShape(22.dp))
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .border(BorderStroke(0.5.dp, Color.White.copy(alpha = 0.30f)), RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(20.dp))
             .clickable { onClick() }
             .testTag("book_card_${book.id}"),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.08f)),
+        shape = RoundedCornerShape(20.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            book.accentColor.copy(alpha = 0.04f),
-                            Color.White
-                        )
-                    )
-                )
-                .padding(20.dp)
+                .background(Color.White.copy(alpha = 0.12f))
+                .padding(18.dp)
         ) {
             // Book Badge & ID
             Row(

@@ -228,336 +228,456 @@ fun SpokenEnglishScreen(
 // ==============================================================
 // 1. Books Overview View (Main Page)
 // ==============================================================
+// ==============================================================
+// 1. Books Overview View (Main Page - Re-designed to match My Library Spec)
+// ==============================================================
 @Composable
 private fun BooksOverviewView(
     onBack: () -> Unit,
     onSelectBook: (String) -> Unit,
     onAskGemini: (String) -> Unit
 ) {
-    LazyColumn(
+    val context = LocalContext.current
+    val sharedPrefs = remember {
+        context.getSharedPreferences("spoken_custom_books_prefs", android.content.Context.MODE_PRIVATE)
+    }
+
+    // Dynamic titles for Books 3, 4, 5, 6 saved in SharedPreferences
+    var book3Title by remember { mutableStateOf(sharedPrefs.getString("book_3_title", "Add Book 3") ?: "Add Book 3") }
+    var book4Title by remember { mutableStateOf(sharedPrefs.getString("book_4_title", "Add Book 4") ?: "Add Book 4") }
+    var book5Title by remember { mutableStateOf(sharedPrefs.getString("book_5_title", "Add Book 5") ?: "Add Book 5") }
+    var book6Title by remember { mutableStateOf(sharedPrefs.getString("book_6_title", "Add Book 6") ?: "Add Book 6") }
+
+    // Dialog state for setting custom book titles
+    var editingBookIndex by remember { mutableStateOf<Int?>(null) }
+    var inputDialogTitle by remember { mutableStateOf("") }
+
+    if (editingBookIndex != null) {
+        AlertDialog(
+            onDismissRequest = { editingBookIndex = null },
+            title = {
+                Text(
+                    text = "புத்தகத் தலைப்பை உள்ளிடவும்",
+                    fontWeight = FontWeight.Bold,
+                    color = SubikshaNavy,
+                    fontSize = 17.sp
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Book ${editingBookIndex}-க்கான புதிய தலைப்பை உள்ளிட்டு சேமிக்கவும்:",
+                        fontSize = 13.sp,
+                        color = SubikshaTextMuted
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = inputDialogTitle,
+                        onValueChange = { inputDialogTitle = it },
+                        placeholder = { Text("எ.கா. Grammar Mastery – Book ${editingBookIndex}") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val savedText = inputDialogTitle.trim().ifEmpty { "Add Book $editingBookIndex" }
+                        when (editingBookIndex) {
+                            3 -> {
+                                book3Title = savedText
+                                sharedPrefs.edit().putString("book_3_title", savedText).apply()
+                            }
+                            4 -> {
+                                book4Title = savedText
+                                sharedPrefs.edit().putString("book_4_title", savedText).apply()
+                            }
+                            5 -> {
+                                book5Title = savedText
+                                sharedPrefs.edit().putString("book_5_title", savedText).apply()
+                            }
+                            6 -> {
+                                book6Title = savedText
+                                sharedPrefs.edit().putString("book_6_title", savedText).apply()
+                            }
+                        }
+                        android.widget.Toast.makeText(context, "தலைப்பு வெற்றிகரமாகச் சேமிக்கப்பட்டது!", android.widget.Toast.LENGTH_SHORT).show()
+                        editingBookIndex = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SubikshaRoyalPurple),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("சேமி (Save)", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingBookIndex = null }) {
+                    Text("ரத்து (Cancel)", color = SubikshaNavy)
+                }
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(18.dp)
+        )
+    }
+
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding(),
-        contentPadding = PaddingValues(bottom = 32.dp)
+            .statusBarsPadding()
+            .navigationBarsPadding()
     ) {
-        // Ultra Deluxe App Bar
-        item {
-            Row(
+        // 1. Header (Matching My Library Screen Header Structure)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onBack,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.White)
+                    .shadow(2.dp, RoundedCornerShape(12.dp))
+                    .testTag("spoken_back_btn")
             ) {
-                IconButton(
-                    onClick = onBack,
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White)
-                        .shadow(2.dp, RoundedCornerShape(12.dp))
-                        .testTag("spoken_back_btn")
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = SubikshaNavy
-                    )
-                }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = SubikshaNavy
+                )
+            }
 
-                Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Learn English Through Tamil",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = SubikshaNavy,
-                        letterSpacing = (-0.3).sp
-                    )
-                    Text(
-                        text = "அன்றாடப் பேச்சு ஆங்கிலம் மற்றும் இலக்கணப் பயிற்சி",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = SubikshaRoyalPurple
-                    )
-                }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Learn English Through Tamil",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = SubikshaNavy,
+                    letterSpacing = (-0.3).sp
+                )
+                Text(
+                    text = "அன்றாடப் பேச்சு ஆங்கிலம் மற்றும் இலக்கணப் பயிற்சி",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = SubikshaRoyalPurple
+                )
             }
         }
 
-        // Hero Banner Card
-        item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(
-                                Color(0xFF0F172A), // Midnight Slate
-                                Color(0xFF1E1B4B), // Deep Indigo
-                                Color(0xFF312E81)
-                            )
-                        )
-                    )
-                    .padding(20.dp)
-            ) {
-                Column {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Surface(
-                            color = Color(0xFFF59E0B).copy(alpha = 0.2f),
-                            shape = RoundedCornerShape(8.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.6f))
-                        ) {
-                            Text(
-                                text = "✨ ULTRA DELUXE LEARNING",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFFDE68A),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
-
-                        Text(
-                            text = "2 COMPLETE BOOKS",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White.copy(alpha = 0.8f)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Text(
-                        text = "சுபிக்ஷா ஆசிரியை கற்பிக்கும்\nமுழுமையான Spoken English",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        lineHeight = 28.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "புக் 1-ல் அன்றாடப் பேச்சு மற்றும் 100 வாக்கியங்கள்; புக் 2-ல் 12 காலங்கள் (12 Tenses) மற்றும் நேரடி ஒப்பீடுகள்.",
-                        fontSize = 13.sp,
-                        color = Color(0xFFCBD5E1),
-                        lineHeight = 18.sp
-                    )
-                }
-            }
-        }
-
-        // Two Main Book Cards
-        item {
-            Text(
-                text = "பாடப் புத்தகங்கள் (Select a Book)",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = SubikshaNavy,
-                modifier = Modifier.padding(start = 20.dp, top = 16.dp, bottom = 8.dp)
-            )
-        }
-
-        items(SpokenEnglishRepository.books) { book ->
-            BookSelectionCard(
-                book = book,
-                onClick = { onSelectBook(book.id) }
-            )
-        }
-
-        // Daily Motivation / AI Question Assistant
-        item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 10.dp)
-                    .border(BorderStroke(0.5.dp, Color.White.copy(alpha = 0.30f)), RoundedCornerShape(20.dp))
-                    .clip(RoundedCornerShape(20.dp))
-                    .clickable { onAskGemini("ஆங்கிலத்தில் சரளமாகப் பேச சில எளிய வழிகளைத் தமிழில் சொல்லுங்கள்.") }
-                    .testTag("spoken_ai_assistant_card"),
-                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.08f)),
-                shape = RoundedCornerShape(20.dp)
+        // Main Content Area: Zero-scroll compact layout with 6 cards and Bottom AI Banner
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            // 2. Title Banner Strip (Matching My Library "பாட நூலகப் பிரிவுகள்" Banner)
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = Color.White.copy(alpha = 0.9f),
+                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                shadowElevation = 2.dp,
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 14.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(SubikshaPastelPurple.copy(alpha = 0.3f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = "AI Help",
-                            tint = SubikshaRoyalPurple,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(14.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = "📚", fontSize = 16.sp)
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "சுபிக்ஷா AI-யிடம் சந்தேகம் கேட்கலாம்",
+                            text = "பாடப் புத்தகங்கள்",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = SubikshaNavy
                         )
+                    }
+
+                    Surface(
+                        color = SubikshaPastelPurple.copy(alpha = 0.35f),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
                         Text(
-                            text = "வாக்கியங்கள், உச்சரிப்பு விளக்கம் பெற இங்கே தட்டவும்.",
-                            fontSize = 12.sp,
-                            color = SubikshaTextMuted
+                            text = "6 புத்தகங்கள்",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = SubikshaRoyalPurple,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // 3. 6 Book Cards (Image 2 My Library Style - Uniform Height, Glassmorphism, Zero-scroll)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Card 1: Book 1
+                SpokenBookRowCard(
+                    title = "Spoken English Through Tamil – Book 1",
+                    subtitle = "அன்றாடப் பேச்சு ஆங்கிலம் - புத்தகம் 1",
+                    number = 1,
+                    primaryColor = Color(0xFF2563EB),     // Vibrant Royal Blue
+                    secondaryColor = Color(0xFF3B82F6),
+                    icon = Icons.Default.MenuBook,
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    onClick = { onSelectBook("book_1") }
+                )
+
+                // Card 2: Book 2
+                SpokenBookRowCard(
+                    title = "English Tenses Through Tamil – Book 2",
+                    subtitle = "ஆங்கிலக் காலங்கள் - புத்தகம் 2 (12 Tenses)",
+                    number = 2,
+                    primaryColor = Color(0xFF0284C7),     // Deep Sky Cyan
+                    secondaryColor = Color(0xFF38BDF8),
+                    icon = Icons.Default.MenuBook,
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    onClick = { onSelectBook("book_2") }
+                )
+
+                // Card 3: Add Book 3
+                SpokenBookRowCard(
+                    title = book3Title,
+                    subtitle = if (book3Title == "Add Book 3") "புதிய புத்தகத்தைச் சேர்க்க தட்டவும்" else "சேமிக்கப்பட்ட புத்தகம் 3",
+                    number = 3,
+                    primaryColor = Color(0xFF059669),     // Emerald Green
+                    secondaryColor = Color(0xFF34D399),
+                    icon = Icons.Default.PostAdd,
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    onClick = {
+                        inputDialogTitle = if (book3Title != "Add Book 3") book3Title else ""
+                        editingBookIndex = 3
+                    }
+                )
+
+                // Card 4: Add Book 4
+                SpokenBookRowCard(
+                    title = book4Title,
+                    subtitle = if (book4Title == "Add Book 4") "புதிய புத்தகத்தைச் சேர்க்க தட்டவும்" else "சேமிக்கப்பட்ட புத்தகம் 4",
+                    number = 4,
+                    primaryColor = Color(0xFFEA580C),     // Warm Orange
+                    secondaryColor = Color(0xFFFB923C),
+                    icon = Icons.Default.PostAdd,
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    onClick = {
+                        inputDialogTitle = if (book4Title != "Add Book 4") book4Title else ""
+                        editingBookIndex = 4
+                    }
+                )
+
+                // Card 5: Add Book 5
+                SpokenBookRowCard(
+                    title = book5Title,
+                    subtitle = if (book5Title == "Add Book 5") "புதிய புத்தகத்தைச் சேர்க்க தட்டவும்" else "சேமிக்கப்பட்ட புத்தகம் 5",
+                    number = 5,
+                    primaryColor = Color(0xFF9333EA),     // Royal Purple
+                    secondaryColor = Color(0xFFA855F7),
+                    icon = Icons.Default.PostAdd,
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    onClick = {
+                        inputDialogTitle = if (book5Title != "Add Book 5") book5Title else ""
+                        editingBookIndex = 5
+                    }
+                )
+
+                // Card 6: Add Book 6
+                SpokenBookRowCard(
+                    title = book6Title,
+                    subtitle = if (book6Title == "Add Book 6") "புதிய புத்தகத்தைச் சேர்க்க தட்டவும்" else "சேமிக்கப்பட்ட புத்தகம் 6",
+                    number = 6,
+                    primaryColor = Color(0xFF0D9488),     // Teal Green
+                    secondaryColor = Color(0xFF2DD4BF),
+                    icon = Icons.Default.PostAdd,
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    onClick = {
+                        inputDialogTitle = if (book6Title != "Add Book 6") book6Title else ""
+                        editingBookIndex = 6
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 4. Bottom AI Banner (Matching Image 2 Bottom Navigation Card with '<' and '>>')
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Color.White.copy(alpha = 0.85f),
+                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                shadowElevation = 3.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .clickable { onAskGemini("ஆங்கிலத்தில் சரளமாகப் பேச சில எளிய வழிகளைத் தமிழில் சொல்லுங்கள்.") }
+                    .testTag("spoken_ai_assistant_card")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Left Arrow (<)
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = null,
+                        tint = SubikshaRoyalPurple,
+                        modifier = Modifier.size(18.dp)
+                    )
+
+                    // Center Content with Sparkle Icon and Tamil Text
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = "AI",
+                            tint = Color(0xFF8B5CF6),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "AI-யிடம் சந்தேகம் கேட்கலாம்",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF1E293B)
                         )
                     }
 
+                    // Right Double-Arrow (>>)
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Open",
+                        contentDescription = "Ask AI",
                         tint = SubikshaRoyalPurple,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-// ==============================================================
-// Book Selection Card
-// ==============================================================
-@Composable
-private fun BookSelectionCard(
-    book: SpokenBook,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .border(BorderStroke(0.5.dp, Color.White.copy(alpha = 0.30f)), RoundedCornerShape(20.dp))
-            .clip(RoundedCornerShape(20.dp))
-            .clickable { onClick() }
-            .testTag("book_card_${book.id}"),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.08f)),
-        shape = RoundedCornerShape(20.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.White.copy(alpha = 0.12f))
-                .padding(18.dp)
-        ) {
-            // Book Badge & ID
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    color = book.accentColor.copy(alpha = 0.12f),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        text = if (book.id == "book_1") "📘 BOOK 1" else "📙 BOOK 2",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = book.accentColor,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    )
-                }
-
-                Surface(
-                    color = SubikshaSurfaceVariant,
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        text = book.badge,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = SubikshaNavy,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Book Titles
-            Text(
-                text = book.title,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = SubikshaNavy,
-                letterSpacing = (-0.3).sp
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = book.tamilTitle,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = book.accentColor
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Text(
-                text = book.description,
-                fontSize = 13.sp,
-                color = SubikshaTextMuted,
-                lineHeight = 18.sp
-            )
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            // Action Button
-            Button(
-                onClick = onClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(46.dp)
-                    .clip(RoundedCornerShape(14.dp)),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = book.accentColor
-                )
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "படிக்கத் தொடங்கு (Start Learning)",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
-                        tint = Color.White,
                         modifier = Modifier.size(18.dp)
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(4.dp))
         }
     }
 }
 
 // ==============================================================
-// 2. Book Chapters Index View (Heading by Heading)
+// Spoken Book Row Card (Image 2 My Library Compact Card Exact Replica)
 // ==============================================================
+@Composable
+private fun SpokenBookRowCard(
+    title: String,
+    subtitle: String,
+    number: Int,
+    primaryColor: Color,
+    secondaryColor: Color,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .shadow(2.dp, RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(14.dp))
+            .clickable { onClick() }
+            .testTag("spoken_book_card_$number"),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Icon Badge with Gradient
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(primaryColor, secondaryColor)
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Titles
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = SubikshaNavy,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+                Text(
+                    text = subtitle,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = primaryColor,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Number Badge
+            Surface(
+                color = primaryColor.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, primaryColor.copy(alpha = 0.25f))
+            ) {
+                Text(
+                    text = "$number",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = primaryColor,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(6.dp))
+
+            // Arrow
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = "Open",
+                tint = primaryColor,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+}
+
 @Composable
 private fun BookIndexView(
     book: SpokenBook,

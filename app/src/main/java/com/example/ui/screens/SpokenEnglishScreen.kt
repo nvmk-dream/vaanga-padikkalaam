@@ -380,9 +380,9 @@ private fun BooksOverviewView(
             // 2. Title Banner Strip (Matching My Library "பாட நூலகப் பிரிவுகள்" Banner)
             Surface(
                 shape = RoundedCornerShape(14.dp),
-                color = Color.White.copy(alpha = 0.9f),
-                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                shadowElevation = 2.dp,
+                color = Color.White.copy(alpha = 0.20f),
+                border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.35f)),
+                shadowElevation = 0.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -517,9 +517,9 @@ private fun BooksOverviewView(
             // 4. Bottom AI Banner (Matching Image 2 Bottom Navigation Card with '<' and '>>')
             Surface(
                 shape = RoundedCornerShape(16.dp),
-                color = Color.White.copy(alpha = 0.85f),
-                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                shadowElevation = 3.dp,
+                color = Color.White.copy(alpha = 0.16f),
+                border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.35f)),
+                shadowElevation = 0.dp,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp)
@@ -591,31 +591,34 @@ private fun SpokenBookRowCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
+    // Elegant Translucent Glassmorphism Card (Exact replica of Image 2 My Library Category Card)
     Card(
         modifier = modifier
-            .shadow(2.dp, RoundedCornerShape(14.dp))
-            .clip(RoundedCornerShape(14.dp))
+            .border(BorderStroke(0.5.dp, Color.White.copy(alpha = 0.35f)), RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(18.dp))
             .clickable { onClick() }
             .testTag("spoken_book_card_$number"),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.12f)),
+        shape = RoundedCornerShape(18.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 6.dp),
+                .background(Color.White.copy(alpha = 0.14f))
+                .padding(horizontal = 14.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icon Badge with Gradient
+            // Icon Badge with Gradient and subtle shadow
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(10.dp))
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(12.dp))
                     .background(
                         Brush.linearGradient(
                             colors = listOf(primaryColor, secondaryColor)
                         )
-                    ),
+                    )
+                    .shadow(3.dp, RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -626,7 +629,7 @@ private fun SpokenBookRowCard(
                 )
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
             // Titles
             Column(modifier = Modifier.weight(1f)) {
@@ -638,6 +641,7 @@ private fun SpokenBookRowCard(
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = subtitle,
                     fontSize = 11.sp,
@@ -650,11 +654,11 @@ private fun SpokenBookRowCard(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Number Badge
+            // Elegant Glass Count Badge
             Surface(
                 color = primaryColor.copy(alpha = 0.12f),
                 shape = RoundedCornerShape(8.dp),
-                border = BorderStroke(1.dp, primaryColor.copy(alpha = 0.25f))
+                border = BorderStroke(0.5.dp, primaryColor.copy(alpha = 0.35f))
             ) {
                 Text(
                     text = "$number",

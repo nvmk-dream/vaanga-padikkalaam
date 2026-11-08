@@ -208,14 +208,11 @@ fun HomeScreen(
                 )
         )
 
-        val homeScrollState = rememberScrollState()
-
-        // Layer 2: Clean, compact Column with strictly controlled spacing (No unwanted empty gaps)
+        // Layer 2: Clean, compact Zero-Scroll Column with strictly controlled spacing
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .verticalScroll(homeScrollState)
                 .padding(top = 6.dp, bottom = 8.dp),
             verticalArrangement = Arrangement.Top
         ) {
@@ -500,21 +497,21 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 4. Bottom Student Image Card (Tight crop, zero top empty space)
+            // 4. Bottom Student Image Card (Fills all remaining empty space below 6 cards seamlessly)
             Card(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.90f)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
                 border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.85f)),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(82.dp)
+                    .weight(1f)
                     .padding(horizontal = 16.dp)
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(18.dp))
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.kids_reading_tight),
-                    contentDescription = "Students Learning together",
+                    contentDescription = "Students Learning together with Tablet",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )

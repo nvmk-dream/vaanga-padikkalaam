@@ -10,6 +10,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -206,13 +208,16 @@ fun HomeScreen(
                 )
         )
 
-        // Layer 2: Non-scrolling Column perfectly fitted to viewport
+        val homeScrollState = rememberScrollState()
+
+        // Layer 2: Clean, compact Column with strictly controlled spacing (No unwanted empty gaps)
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .padding(top = 4.dp, bottom = 4.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+                .verticalScroll(homeScrollState)
+                .padding(top = 6.dp, bottom = 8.dp),
+            verticalArrangement = Arrangement.Top
         ) {
             // 1. Header Banner with integrated subiksha banner and custom gallery avatar
             Box(
@@ -313,6 +318,8 @@ fun HomeScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(12.dp))
+
             // 2. Compact Welcome Card
             Card(
                 shape = RoundedCornerShape(16.dp),
@@ -412,12 +419,14 @@ fun HomeScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(12.dp))
+
             // 3. Grid of 6 Feature Cards (3 rows x 2 columns)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Row 1: Gemini Chat (100 Easy Additional Steps) & Image to Text
                 Row(
@@ -489,6 +498,8 @@ fun HomeScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(12.dp))
+
             // 4. Bottom Student Image Card (Tight crop, zero top empty space)
             Card(
                 shape = RoundedCornerShape(16.dp),
@@ -508,6 +519,8 @@ fun HomeScreen(
                     contentScale = ContentScale.Crop
                 )
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }

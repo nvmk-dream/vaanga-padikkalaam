@@ -1,13 +1,20 @@
 package com.example.ui.screens
 
+import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
+import android.speech.RecognizerIntent
 import android.view.ViewGroup
 import android.webkit.*
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.Image
@@ -20,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.VolumeUp
@@ -40,8 +48,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import com.example.R
 import com.example.ui.theme.*
+
+class SpeechRecognitionBridge(
+    private val onStartListening: () -> Unit
+) {
+    @JavascriptInterface
+    fun startListening() {
+        onStartListening()
+    }
+}
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -54,6 +72,171 @@ fun GeminiChatScreen(
     var isLoading by remember { mutableStateOf(true) }
     var loadProgress by remember { mutableFloatStateOf(0f) }
     var hasError by remember { mutableStateOf(false) }
+
+    fun injectSpeechPolyfill(webView: WebView?) {
+        val polyfillJs = """
+            (function() {
+                if (window.__speechBridgeInstalled) return;
+                window.__speechBridgeInstalled = true;
+
+                class SpeechRecognitionPolyfill {
+                    constructor() {
+                        this.continuous = false;
+                        this.interimResults = false;
+                        this.lang = 'ta-IN';
+                        this.onresult = null;
+                        this.onerror = null;
+                        this.onend = null;
+                        this.onstart = null;
+
+                        window.__myRecognitionOnResult = (text) => {
+                            if (this.onresult) {
+                                this.onresult({
+                                    results: [[{ transcript: text }]],
+                                    resultIndex: 0
+                                });
+                            }
+                            if (this.onend) this.onend();
+                        };
+
+                        window.__myRecognitionOnError = (err) => {
+                            if (this.onerror) this.onerror({ error: err });
+                            if (this.onend) this.onend();
+                        };
+                    }
+
+                    start() {
+                        if (window.AndroidBridge) {
+                            if (this.onstart) this.onstart();
+                            window.AndroidBridge.startListening();
+                        }
+                    }
+
+                    stop() {
+                        if (this.onend) this.onend();
+                    }
+
+                    abort() {
+                        this.stop();
+                    }
+                }
+
+                window.webkitSpeechRecognition = SpeechRecognitionPolyfill;
+                window.SpeechRecognition = SpeechRecognitionPolyfill;
+
+                // Hook directly into Gemini web mic buttons
+                function hookMicButtons() {
+                    const micBtns = document.querySelectorAll(
+                        'button[aria-label*="mic" i], button[aria-label*="voice" i], button[aria-label*="microphone" i], button[aria-label*="மைக்" i], mat-icon[data-mat-icon-name="mic"], button.mic-button, [data-test-id*="mic"]'
+                    );
+                    micBtns.forEach(btn => {
+                        if (!btn.__androidHooked) {
+                            btn.__androidHooked = true;
+                            btn.addEventListener('click', function(e) {
+                                if (window.AndroidBridge) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    window.AndroidBridge.startListening();
+                                }
+                            }, true);
+                        }
+                    });
+                }
+                hookMicButtons();
+                setInterval(hookMicButtons, 1200);
+            })();
+        """.trimIndent()
+        webView?.evaluateJavascript(polyfillJs, null)
+    }
+
+    fun submitRecognizedSpeechToGemini(speechText: String) {
+        if (speechText.isBlank()) return
+        val escaped = speechText
+            .replace("\\", "\\\\")
+            .replace("'", "\\'")
+            .replace("\n", " ")
+
+        val js = """
+            (function() {
+                const text = '$escaped';
+                if (window.__myRecognitionOnResult) {
+                    try { window.__myRecognitionOnResult(text); } catch(e) {}
+                }
+
+                // Directly insert into prompt textbox as guaranteed fallback
+                const inputEl = document.querySelector('rich-textarea p') || 
+                                document.querySelector('rich-textarea div[contenteditable="true"]') ||
+                                document.querySelector('div[contenteditable="true"][role="textbox"]') ||
+                                document.querySelector('div[contenteditable="true"]') ||
+                                document.querySelector('textarea');
+                if (inputEl) {
+                    inputEl.focus();
+                    inputEl.textContent = text;
+                    inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+                    inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+                    setTimeout(function() {
+                        const sendBtn = document.querySelector('button[aria-label*="Send" i]') ||
+                                        document.querySelector('button[aria-label*="அனுப்பு" i]') ||
+                                        document.querySelector('button.send-button');
+                        if (sendBtn) {
+                            sendBtn.click();
+                        }
+                    }, 400);
+                }
+            })();
+        """.trimIndent()
+        webViewInstance?.evaluateJavascript(js, null)
+        Toast.makeText(context, "\"$speechText\" அனுப்பப்பட்டது!", Toast.LENGTH_SHORT).show()
+    }
+
+    val speechRecognizerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            val spokenMatches = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+            val recognized = spokenMatches?.firstOrNull().orEmpty()
+            if (recognized.isNotEmpty()) {
+                submitRecognizedSpeechToGemini(recognized)
+            }
+        }
+    }
+
+    fun startNativeListening() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ta-IN")
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Gemini AI — தயவுசெய்து பேசுங்கள்...")
+        }
+        try {
+            speechRecognizerLauncher.launch(intent)
+        } catch (_: Exception) {
+            Toast.makeText(context, "கூகுள் வாய்ஸ் மைக்ரோஃபோன் தேவை", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            startNativeListening()
+        } else {
+            Toast.makeText(context, "மைக்ரோஃபோன் அனுமதி தேவை (Mic permission needed)", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun checkAndStartListening() {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            startNativeListening()
+        } else {
+            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
 
     // Intercept Android hardware/gesture back press:
     BackHandler {
@@ -339,16 +522,38 @@ fun GeminiChatScreen(
                             cookieManager.setAcceptCookie(true)
                             cookieManager.setAcceptThirdPartyCookies(this, true)
 
+                            // Bind Native Speech Bridge to WebView
+                            addJavascriptInterface(
+                                SpeechRecognitionBridge(
+                                    onStartListening = {
+                                        (context as? Activity)?.runOnUiThread {
+                                            checkAndStartListening()
+                                        } ?: run {
+                                            checkAndStartListening()
+                                        }
+                                    }
+                                ),
+                                "AndroidBridge"
+                            )
+
                             webChromeClient = object : WebChromeClient() {
                                 override fun onProgressChanged(view: WebView?, newProgress: Int) {
                                     loadProgress = newProgress / 100f
+                                    if (newProgress >= 70) {
+                                        injectSpeechPolyfill(view)
+                                    }
                                     if (newProgress >= 100) {
                                         isLoading = false
+                                        injectSpeechPolyfill(view)
                                     }
                                 }
 
                                 override fun onPermissionRequest(request: PermissionRequest?) {
-                                    request?.grant(request.resources)
+                                    (context as? Activity)?.runOnUiThread {
+                                        request?.grant(request.resources)
+                                    } ?: run {
+                                        request?.grant(request?.resources)
+                                    }
                                 }
                             }
 
@@ -360,6 +565,7 @@ fun GeminiChatScreen(
 
                                 override fun onPageFinished(view: WebView?, url: String?) {
                                     isLoading = false
+                                    injectSpeechPolyfill(view)
                                 }
 
                                 override fun onReceivedError(
@@ -381,6 +587,33 @@ fun GeminiChatScreen(
                     update = { webView ->
                         webViewInstance = webView
                     }
+                )
+
+                // Floating Action Button for Direct Voice Speaking
+                ExtendedFloatingActionButton(
+                    onClick = { checkAndStartListening() },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Mic,
+                            contentDescription = "குரல் வழி பேசுங்கள்",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = "பேசுங்கள்",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    },
+                    containerColor = SubikshaRoyalPurple,
+                    contentColor = Color.White,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = 24.dp, end = 16.dp)
+                        .shadow(10.dp, RoundedCornerShape(24.dp))
                 )
 
                 // Offline / Error fallback

@@ -97,10 +97,11 @@ fun SpokenEnglishScreen(
         if (!isTtsReady || ttsEngine == null) return
         ttsEngine?.stop()
 
-        // 1. Clean out all occurrences of V1, V2, V3 from voice listening
+        // 1. Clean out all occurrences of V1, V2, V3 and dashed blanks from voice listening
         val cleanedText = rawText
             .replace(Regex("(?i)\\(\\s*v[1-3]\\s*\\)"), "")
             .replace(Regex("(?i)\\bv[1-3]\\b"), "")
+            .replace(Regex("([_—–]+(?:\\s*[_—–]+)*|-{2,}(?:\\s*-{2,})*)"), " dash ")
             .replace("(", "")
             .replace(")", "")
             .trim()

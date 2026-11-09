@@ -130,11 +130,41 @@ fun ImageToTextScreen(
         }
     }
 
-    fun speak(text: String, wordTag: String? = null) {
+    fun cleanSpeechText(rawText: String, isTamil: Boolean): String {
+        val blankReplacement = if (isTamil) " கோடிட்ட இடம் " else " dash "
+        return rawText
+            // Replace runs of underscores or dashes into single dash / கோடிட்ட இடம்
+            .replace(Regex("([_—–]+(?:\\s*[_—–]+)*|-{2,}(?:\\s*-{2,})*)"), blankReplacement)
+            // Remove markdown formatting asterisks and headers
+            .replace(Regex("[*#`~]"), " ")
+            // Ensure friendly pronunciation for brackets
+            .replace("(", ", ")
+            .replace(")", ", ")
+            // Collapse whitespace
+            .replace(Regex("\\s+"), " ")
+            .trim()
+    }
+
+    fun speak(text: String, wordTag: String? = null, isTamil: Boolean = false) {
         if (!isTtsReady || ttsEngine == null) return
         ttsEngine?.stop()
         speakingWord = wordTag
-        ttsEngine?.speak(text, TextToSpeech.QUEUE_FLUSH, null, wordTag ?: "ocr_speech")
+
+        // Set language based on content
+        if (isTamil) {
+            val inTaLocale = Locale("ta", "IN")
+            val result = ttsEngine?.setLanguage(inTaLocale)
+            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                try {
+                    ttsEngine?.language = Locale("ta")
+                } catch (_: Exception) {}
+            }
+        } else {
+            ttsEngine?.language = Locale.US
+        }
+
+        val speechText = cleanSpeechText(text, isTamil)
+        ttsEngine?.speak(speechText, TextToSpeech.QUEUE_FLUSH, null, wordTag ?: "ocr_speech")
     }
 
     fun copyToClipboard(label: String, text: String) {
@@ -446,7 +476,7 @@ fun ImageToTextScreen(
                                         ExtractedTextTabContent(
                                             ocrResult = ocrResult,
                                             onEdit = { showEditDialog = true },
-                                            onSpeak = { speak(ocrResult.rawEnglishText) },
+                                            onSpeak = { speak(ocrResult.rawEnglishText, isTamil = false) },
                                             onCopy = { copyToClipboard("அசல் ஆங்கில உரை", ocrResult.rawEnglishText) },
                                             accentColor = mauveHeader,
                                             deepTextColor = deepTextColor
@@ -456,10 +486,10 @@ fun ImageToTextScreen(
                                     OcrTab.KEY_WORDS -> {
                                         KeyWordsTabContent(
                                             keyWords = ocrResult.keyWords,
-                                            onSpeakWord = { word -> speak(word, word) },
+                                            onSpeakWord = { word -> speak(word, word, isTamil = false) },
                                             onSpeakAll = {
                                                 val allWords = ocrResult.keyWords.joinToString(". ") { it.english }
-                                                speak(allWords)
+                                                speak(allWords, isTamil = false)
                                             },
                                             speakingWord = speakingWord,
                                             accentColor = roseGoldAccent,
@@ -472,7 +502,7 @@ fun ImageToTextScreen(
                                             explanation = ocrResult.detailedExplanation,
                                             onSpeak = {
                                                 val text = "${ocrResult.detailedExplanation.headingTamil}. ${ocrResult.detailedExplanation.centralIdea}"
-                                                speak(text)
+                                                speak(text, isTamil = true)
                                             },
                                             accentColor = mauveHeader,
                                             deepTextColor = deepTextColor
@@ -482,7 +512,7 @@ fun ImageToTextScreen(
                                     OcrTab.TAMIL_TRANSLATION -> {
                                         TamilTranslationTabContent(
                                             translation = ocrResult.fullTamilTranslation,
-                                            onSpeak = { speak(ocrResult.fullTamilTranslation) },
+                                            onSpeak = { speak(ocrResult.fullTamilTranslation, isTamil = true) },
                                             accentColor = mauveHeader,
                                             deepTextColor = deepTextColor
                                         )

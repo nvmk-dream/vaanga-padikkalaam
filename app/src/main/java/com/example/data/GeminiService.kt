@@ -278,7 +278,7 @@ class GeminiService(private val apiKeyManager: ApiKeyManager) {
                     3. PRESERVE NUMBERING & CHOICES: Strictly keep question numbers (1, 2, 3..), sub-questions / multiple choice options ((a), (b), (c), (d)..), fill-in-the-blanks, matching columns, and headings intact and properly attached to their corresponding sentences. Never separate choice letters from their text.
                     4. SPELLING & CLARITY: Correct any printing blurriness or layout distortion. Ensure correct English spelling.
                     5. EXPLANATIONS & SOLUTIONS: In 'paragraphsExplanation', provide step-by-step solutions/answers with friendly, clear Tamil explanations for each question shown.
-                    6. KEY WORDS: Extract 6-12 important vocabulary words with accurate Tamil meanings and parts of speech.
+                    6. ALL KEY WORDS & VOCABULARY: Extract ALL important vocabulary words, grammar words, prefixes, suffixes, conjunctions, and meaningful terms appearing in the text (e.g. 20 to 40+ words if present). Do NOT limit to only 6-10 words. For each word provide accurate Tamil meaning and part of speech (Noun, Verb, Adjective, Conjunction, Prefix, Suffix, etc.). Students will scroll through the full list.
                     7. Output MUST be ONLY valid JSON matching this exact schema:
                     {
                       "heading": "Worksheet / Lesson Title in English (e.g. Formative Assessment-IV)",

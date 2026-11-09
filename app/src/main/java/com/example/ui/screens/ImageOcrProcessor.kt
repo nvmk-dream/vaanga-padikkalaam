@@ -253,7 +253,45 @@ object ImageOcrProcessor {
         "questions" to ("வினாக்கள்" to "Noun"),
         "answers" to ("விடைகள்" to "Noun"),
         "example" to ("உதாரணம்" to "Noun"),
-        "blanks" to ("கோடிட்ட இடங்கள்" to "Noun")
+        "blanks" to ("கோடிட்ட இடங்கள்" to "Noun"),
+        "prefix" to ("முன்னொட்டு" to "Grammar"),
+        "prefixes" to ("முன்னொட்டுகள்" to "Grammar"),
+        "suffix" to ("பின்னொட்டு" to "Grammar"),
+        "suffixes" to ("பின்னொட்டுகள்" to "Grammar"),
+        "conjunction" to ("இணைப்புச் சொல்" to "Grammar"),
+        "conjunctions" to ("இணைப்புச் சொற்கள்" to "Grammar"),
+        "grammar" to ("இலக்கணம்" to "Noun"),
+        "view" to ("பார்வை / காணுதல்" to "Verb/Noun"),
+        "fix" to ("பொருத்து / சரிசெய்" to "Verb"),
+        "school" to ("பள்ளி" to "Noun"),
+        "correct" to ("சரியான / சரிசெய்" to "Adjective/Verb"),
+        "free" to ("இலவச / விடுதலை" to "Adjective"),
+        "friend" to ("நண்பர்" to "Noun"),
+        "hand" to ("கை" to "Noun"),
+        "punish" to ("தண்டி" to "Verb"),
+        "hard" to ("கடினமான" to "Adjective"),
+        "joining" to ("இணைக்கும்" to "Verb/Adj"),
+        "combine" to ("ஒன்றாக இணை" to "Verb"),
+        "sentences" to ("வாக்கியங்கள்" to "Noun"),
+        "contrast" to ("முரண்பாடு" to "Noun"),
+        "competition" to ("போட்டி" to "Noun"),
+        "training" to ("பயிற்சி" to "Noun/Verb"),
+        "carried" to ("சுமந்து சென்றனர்" to "Verb"),
+        "patrons" to ("ஆதரவாளர்கள் / புரவலர்கள்" to "Noun"),
+        "tastes" to ("விருப்பங்கள் / சுவைகள்" to "Noun"),
+        "choice" to ("தேர்வு / விருப்பம்" to "Noun"),
+        "exercised" to ("பயன்படுத்தப்பட்டது" to "Verb"),
+        "teacher" to ("ஆசிரியர்" to "Noun"),
+        "designer" to ("வடிவமைப்பாளர்" to "Noun"),
+        "reason" to ("காரணம்" to "Noun"),
+        "result" to ("விளைவு / முடிவு" to "Noun"),
+        "excited" to ("ஆர்வமும் உற்சாகமும்" to "Adjective"),
+        "cousins" to ("உறவினர் சகோதரர்கள்" to "Noun"),
+        "brackets" to ("அடைப்புக்குறிகள்" to "Noun"),
+        "roof" to ("கூரை" to "Noun"),
+        "almost" to ("கிட்டத்தட்ட" to "Adverb"),
+        "rewrite" to ("மீண்டும் எழுது" to "Verb"),
+        "suitable" to ("பொருத்தமான" to "Adjective")
     )
 
     /**
@@ -305,12 +343,13 @@ object ImageOcrProcessor {
             }
         }
 
-        // Smart Vocabulary Extraction from the actual text
+        // Smart Vocabulary Extraction from the actual text - No artificial limits!
         val allWords = trimmed.split(Regex("[^a-zA-Z\\-]+"))
-            .filter { it.length > 3 }
+            .filter { it.length > 2 }
             .distinctBy { it.lowercase() }
 
         val foundKeywords = mutableListOf<OcrKeyWord>()
+        // 1. First add words matching school dictionary
         for (w in allWords) {
             val lower = w.lowercase()
             schoolDictionary[lower]?.let { (tamil, pos) ->
@@ -318,13 +357,12 @@ object ImageOcrProcessor {
             }
         }
 
-        // If dictionary didn't catch enough, add words from the actual text
-        if (foundKeywords.size < 8) {
-            for (w in allWords) {
-                if (foundKeywords.none { it.english.equals(w, ignoreCase = true) }) {
-                    foundKeywords.add(OcrKeyWord(w.replaceFirstChar { it.uppercase() }, "முக்கியச் சொல்", "Word"))
-                    if (foundKeywords.size >= 10) break
-                }
+        // 2. Add other meaningful words from the text so students get all words on page
+        val stopWords = setOf("the", "and", "are", "for", "with", "from", "that", "this", "they", "them", "have", "been", "were", "will", "what", "when", "where", "which", "into", "some", "more", "also", "then", "than", "your", "like")
+        for (w in allWords) {
+            val lower = w.lowercase()
+            if (lower.length > 3 && !stopWords.contains(lower) && foundKeywords.none { it.english.equals(w, ignoreCase = true) }) {
+                foundKeywords.add(OcrKeyWord(w.replaceFirstChar { it.uppercase() }, "முக்கியச் சொல்", "Word"))
             }
         }
 
@@ -344,7 +382,7 @@ object ImageOcrProcessor {
             originalHeading = heading,
             rawEnglishText = uniformFormattedEnglish,
             paragraphs = displayParagraphs,
-            keyWords = foundKeywords.take(12),
+            keyWords = foundKeywords,
             detailedExplanation = OcrExplanation(
                 headingTamil = heading,
                 centralIdea = "பாடத்தின் வரிகள் வரிசைப்படி சீரமைக்கப்பட்டுள்ளன. முழுமையான ஆசிரியர் ஆய்வைப் பெற மேலே உள்ள 'Gemini Key' அமைப்பைச் சரிபார்க்கவும்.",

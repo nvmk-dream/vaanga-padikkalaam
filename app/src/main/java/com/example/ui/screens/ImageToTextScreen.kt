@@ -1361,12 +1361,22 @@ private fun KeyWordsTabContent(
                     }
                 }
                 Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = "முக்கியச் சொற்கள் & அர்த்தங்கள்",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = deepTextColor
-                )
+                Column {
+                    Text(
+                        text = "முக்கியச் சொற்கள் & அர்த்தங்கள்",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = deepTextColor
+                    )
+                    if (keyWords.isNotEmpty()) {
+                        Text(
+                            text = "மொத்தம்: ${keyWords.size} சொற்கள் (Scroll to read all)",
+                            fontSize = 11.sp,
+                            color = accentColor,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
             }
 
             OutlinedButton(

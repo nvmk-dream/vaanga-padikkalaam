@@ -500,9 +500,21 @@ fun ImageToTextScreen(
                                     OcrTab.EXPLANATION -> {
                                         ExplanationTabContent(
                                             explanation = ocrResult.detailedExplanation,
-                                            onSpeak = {
-                                                val text = "${ocrResult.detailedExplanation.headingTamil}. ${ocrResult.detailedExplanation.centralIdea}"
+                                            onSpeakCoreConcept = {
+                                                val text = "${ocrResult.detailedExplanation.headingTamil}. மையக் கருத்து: ${ocrResult.detailedExplanation.centralIdea}"
                                                 speak(text, isTamil = true)
+                                            },
+                                            onSpeakDetailed = {
+                                                val detailedText = "விரிவான கருத்து விளக்கம் மற்றும் விடைகள். " +
+                                                    ocrResult.detailedExplanation.paragraphsExplanation.joinToString(". ")
+                                                speak(detailedText, isTamil = true)
+                                            },
+                                            onSpeakItem = { itemText ->
+                                                speak(itemText, isTamil = true)
+                                            },
+                                            onSpeakPractical = {
+                                                val practicalText = "அன்றாட வாழ்வில் பயன்பாடு. " + ocrResult.detailedExplanation.practicalApplication
+                                                speak(practicalText, isTamil = true)
                                             },
                                             accentColor = mauveHeader,
                                             deepTextColor = deepTextColor
@@ -1193,7 +1205,10 @@ private fun KeyWordsTabContent(
 @Composable
 private fun ExplanationTabContent(
     explanation: OcrExplanation,
-    onSpeak: () -> Unit,
+    onSpeakCoreConcept: () -> Unit,
+    onSpeakDetailed: () -> Unit,
+    onSpeakItem: (String) -> Unit,
+    onSpeakPractical: () -> Unit,
     accentColor: Color,
     deepTextColor: Color
 ) {
@@ -1203,7 +1218,10 @@ private fun ExplanationTabContent(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Surface(
                     color = accentColor.copy(alpha = 0.15f),
                     shape = CircleShape,
@@ -1227,10 +1245,10 @@ private fun ExplanationTabContent(
                 )
             }
 
-            IconButton(onClick = onSpeak, modifier = Modifier.size(34.dp)) {
+            IconButton(onClick = onSpeakCoreConcept, modifier = Modifier.size(34.dp)) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                    contentDescription = "Listen",
+                    contentDescription = "Listen Heading and Core Concept",
                     tint = accentColor,
                     modifier = Modifier.size(20.dp)
                 )
@@ -1250,12 +1268,26 @@ private fun ExplanationTabContent(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(
-                    text = "🎯 மையக் கருத்து (Core Concept):",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = accentColor
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "🎯 மையக் கருத்து (Core Concept):",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = accentColor
+                    )
+                    IconButton(onClick = onSpeakCoreConcept, modifier = Modifier.size(28.dp)) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                            contentDescription = "Listen Core Concept",
+                            tint = accentColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = explanation.centralIdea,
@@ -1268,16 +1300,36 @@ private fun ExplanationTabContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Paragraph Explanation & Solutions
-        Text(
-            text = "விரிவான கருத்து விளக்கம் & விடைகள்:",
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            color = deepTextColor
-        )
+        // Paragraph Explanation & Solutions Header with Listen Button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "விரிவான கருத்து விளக்கம் & விடைகள்:",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = deepTextColor,
+                modifier = Modifier.weight(1f)
+            )
+
+            // Listen button for all detailed explanation points & answers
+            IconButton(
+                onClick = onSpeakDetailed,
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                    contentDescription = "Listen Detailed Explanation and Answers",
+                    tint = accentColor,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
         Spacer(modifier = Modifier.height(6.dp))
 
-        explanation.paragraphsExplanation.forEach { item ->
+        explanation.paragraphsExplanation.forEachIndexed { index, item ->
             Surface(
                 color = Color.White.copy(alpha = 0.12f),
                 shape = RoundedCornerShape(16.dp),
@@ -1286,17 +1338,35 @@ private fun ExplanationTabContent(
                     .fillMaxWidth()
                     .padding(vertical = 2.dp)
             ) {
-                Text(
-                    text = item,
-                    fontSize = 13.sp,
-                    color = deepTextColor,
-                    lineHeight = 18.sp,
-                    modifier = Modifier.padding(8.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 10.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = item,
+                        fontSize = 13.sp,
+                        color = deepTextColor,
+                        lineHeight = 18.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(
+                        onClick = { onSpeakItem(item) },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                            contentDescription = "Listen item",
+                            tint = accentColor.copy(alpha = 0.75f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
         // Practical Application
         Surface(
@@ -1305,13 +1375,30 @@ private fun ExplanationTabContent(
             border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.30f)),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(modifier = Modifier.padding(8.dp)) {
-                Text(
-                    text = "🌱 அன்றாட வாழ்வில் பயன்பாடு:",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = accentColor
-                )
+            Column(modifier = Modifier.padding(10.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "🌱 அன்றாட வாழ்வில் பயன்பாடு:",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = accentColor
+                    )
+                    IconButton(
+                        onClick = onSpeakPractical,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                            contentDescription = "Listen Practical Application",
+                            tint = accentColor.copy(alpha = 0.85f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = explanation.practicalApplication,

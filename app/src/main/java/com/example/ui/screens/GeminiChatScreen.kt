@@ -20,6 +20,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -741,32 +742,112 @@ fun GeminiChatScreen(
                     }
                 )
 
-                // Floating Action Button for Direct Voice Speaking
-                ExtendedFloatingActionButton(
-                    onClick = { checkAndStartListening() },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.Mic,
-                            contentDescription = "குரல் வழி பேசுங்கள்",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    },
-                    text = {
-                        Text(
-                            text = "பேசுங்கள்",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
-                        )
-                    },
-                    containerColor = SubikshaRoyalPurple,
-                    contentColor = Color.White,
+                // Realistic Glass Tactile Touch Buttons: Listen 🔊 on top, Speak 🎙️ below, elevated at bottom = 95.dp on left side
+                Column(
                     modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(bottom = 24.dp, end = 16.dp)
-                        .shadow(10.dp, RoundedCornerShape(24.dp))
-                )
+                        .align(Alignment.BottomStart)
+                        .padding(start = 14.dp, bottom = 95.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    // 1. Realistic Glass Listen 🔊 Button
+                    Surface(
+                        onClick = { extractAndSpeakLatestResponse() },
+                        shape = RoundedCornerShape(22.dp),
+                        color = if (isSpeaking) Color(0xFFFFE4E6).copy(alpha = 0.96f) else Color.White.copy(alpha = 0.92f),
+                        border = BorderStroke(
+                            width = 1.2.dp,
+                            brush = if (isSpeaking)
+                                Brush.linearGradient(listOf(Color(0xFFE11D48), Color(0xFFFDA4AF)))
+                            else
+                                Brush.linearGradient(listOf(Color(0xFFC084FC), Color(0xFFE9D5FF), Color.White))
+                        ),
+                        shadowElevation = 8.dp,
+                        modifier = Modifier
+                            .wrapContentSize()
+                            .testTag("gemini_floating_listen_button")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isSpeaking)
+                                            Brush.linearGradient(listOf(Color(0xFFF43F5E), Color(0xFFBE123C)))
+                                        else
+                                            Brush.linearGradient(listOf(Color(0xFF8B5CF6), Color(0xFF6D28D9)))
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (isSpeaking) Icons.Default.Close else Icons.Default.VolumeUp,
+                                    contentDescription = if (isSpeaking) "நிறுத்து" else "கேளுங்கள்",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(17.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (isSpeaking) "நிறுத்து" else "கேளுங்கள் 🔊",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSpeaking) Color(0xFFBE123C) else SubikshaNavy
+                            )
+                        }
+                    }
+
+                    // 2. Realistic Glass Speak 🎙️ Button (Below Listen)
+                    Surface(
+                        onClick = { checkAndStartListening() },
+                        shape = RoundedCornerShape(22.dp),
+                        color = Color.White.copy(alpha = 0.92f),
+                        border = BorderStroke(
+                            width = 1.2.dp,
+                            brush = Brush.linearGradient(
+                                listOf(Color(0xFFF472B6), Color(0xFFA855F7), Color.White)
+                            )
+                        ),
+                        shadowElevation = 8.dp,
+                        modifier = Modifier
+                            .wrapContentSize()
+                            .testTag("gemini_floating_mic_button")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.linearGradient(
+                                            listOf(Color(0xFFEC4899), Color(0xFF8B5CF6))
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Mic,
+                                    contentDescription = "பேசுங்கள்",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(17.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "பேசுங்கள் 🎙️",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = SubikshaNavy
+                            )
+                        }
+                    }
+                }
 
                 // Offline / Error fallback
                 if (hasError) {

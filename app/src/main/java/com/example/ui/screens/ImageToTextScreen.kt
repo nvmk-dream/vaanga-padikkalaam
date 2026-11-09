@@ -47,6 +47,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.data.ApiKeyManager
+import android.graphics.pdf.PdfRenderer
+import android.os.ParcelFileDescriptor
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import com.example.data.DefaultQuotaExceededException
 import com.example.data.GeminiService
 import com.example.ui.components.ApiKeyDialog
@@ -61,7 +65,8 @@ enum class OcrTab(val title: String) {
     EXTRACTED_TEXT("உரை"),
     KEY_WORDS("முக்கிய"),
     EXPLANATION("விளக்கம்"),
-    TAMIL_TRANSLATION("தமிழில்")
+    TAMIL_TRANSLATION("தமிழில்"),
+    QUESTIONS_ANSWERS("வினா-விடை (Q/A)")
 }
 
 enum class ScannerEngine(val title: String, val subtitle: String) {
@@ -191,22 +196,84 @@ fun ImageToTextScreen(
         }
     }
 
-    fun runOcrOnBitmap(bitmap: Bitmap) {
+    fun decodeBitmapFromUri(uri: Uri): Bitmap? {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val source = ImageDecoder.createSource(context.contentResolver, uri)
+                ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
+                    decoder.isMutableRequired = true
+                    decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    fun renderPdfPagesToBitmaps(uri: Uri, maxPages: Int = 10): List<Bitmap> {
+        val bitmaps = mutableListOf<Bitmap>()
+        try {
+            context.contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
+                val pdfRenderer = PdfRenderer(pfd)
+                val totalPages = pdfRenderer.pageCount.coerceAtMost(maxPages)
+                for (i in 0 until totalPages) {
+                    val page = pdfRenderer.openPage(i)
+                    val w = (page.width * 1.5).toInt().coerceAtLeast(100)
+                    val h = (page.height * 1.5).toInt().coerceAtLeast(100)
+                    val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                    bmp.eraseColor(android.graphics.Color.WHITE)
+                    page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    page.close()
+                    bitmaps.add(bmp)
+                }
+                pdfRenderer.close()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return bitmaps
+    }
+
+    fun runOcrOnBitmaps(bitmaps: List<Bitmap>, sourceLabel: String = "பாடம்") {
+        if (bitmaps.isEmpty()) {
+            Toast.makeText(context, "படங்கள் எதுவும் தேர்ந்தெடுக்கப்படவில்லை.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        capturedBitmap = bitmaps.firstOrNull()
+
         if (selectedEngine == ScannerEngine.ML_KIT) {
-            runMlKitOffline(bitmap, "ஆஃப்லைன் ML Kit")
+            runMlKitOffline(bitmaps.first(), "ஆஃப்லைன் ML Kit")
             return
         }
 
         isProcessing = true
-        processingStatus = "சுபிக்ஷா AI ஆசிரியர் படத்தை நேரடியாக வாசிக்கிறது (Gemini Vision)..."
+        processingStatus = if (bitmaps.size > 1) {
+            "சுபிக்ஷா AI ஆசிரியர் ${bitmaps.size} பக்க முழுப் பாடத்தையும் ஆய்வு செய்கிறது..."
+        } else {
+            "சுபிக்ஷா AI ஆசிரியர் படத்தை நேரடியாக வாசிக்கிறது (Gemini Vision)..."
+        }
 
         coroutineScope.launch {
-            val aiResult = geminiService.analyzeBookImageDirect(bitmap)
+            val aiResult = geminiService.analyzeBookImagesDirect(bitmaps)
             aiResult.onSuccess { structuredResult ->
                 ocrResult = structuredResult
                 editedText = structuredResult.rawEnglishText
-                selectedTab = OcrTab.EXTRACTED_TEXT
-                Toast.makeText(context, "பாடப்புத்தகம் வெற்றிகரமாக ஆய்வு செய்யப்பட்டது!", Toast.LENGTH_SHORT).show()
+                selectedTab = if (structuredResult.questionAnswers.isNotEmpty()) {
+                    OcrTab.QUESTIONS_ANSWERS
+                } else {
+                    OcrTab.EXTRACTED_TEXT
+                }
+                val msg = if (bitmaps.size > 1) {
+                    "${bitmaps.size} பக்க முழுப் பாடமும் வினா-விடைகளும் தயாராகிவிட்டன!"
+                } else {
+                    "பாடப்புத்தகம் வெற்றிகரமாக ஆய்வு செய்யப்பட்டது!"
+                }
+                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                 isProcessing = false
             }.onFailure { err ->
                 val errorMsg = err.localizedMessage ?: "AI ஆய்வு தோல்வியடைந்தது"
@@ -215,13 +282,17 @@ fun ImageToTextScreen(
                     showQuotaDialog = true
                 } else {
                     Toast.makeText(context, "AI பிழை: $errorMsg (ஆஃப்லைன் ஸ்கேனர் இயக்கப்படுகிறது)", Toast.LENGTH_LONG).show()
-                    runMlKitOffline(bitmap, "AI பிழை ஏற்பட்டதால்")
+                    runMlKitOffline(bitmaps.first(), "AI பிழை ஏற்பட்டதால்")
                 }
             }
         }
     }
 
-    // Camera Launcher
+    fun runOcrOnBitmap(bitmap: Bitmap) {
+        runOcrOnBitmaps(listOf(bitmap), "ஒற்றைப் படம்")
+    }
+
+    // 1. Camera Launcher
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap ->
@@ -242,30 +313,47 @@ fun ImageToTextScreen(
         }
     }
 
-    // Gallery Picker Launcher
+    // 2. Single Gallery Picker Launcher
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null) {
             selectedImageUri = uri
-            try {
-                val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    val source = ImageDecoder.createSource(context.contentResolver, uri)
-                    ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
-                        decoder.isMutableRequired = true
-                        decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
-                    }
-                } else {
-                    @Suppress("DEPRECATION")
-                    MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
-                }
-                capturedBitmap = bitmap
-                if (bitmap != null) {
-                    runOcrOnBitmap(bitmap)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
+            val bitmap = decodeBitmapFromUri(uri)
+            if (bitmap != null) {
+                runOcrOnBitmap(bitmap)
+            } else {
                 Toast.makeText(context, "படத்தை ஏற்றுவதில் பிழை ஏற்பட்டது.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // 3. Multi-Image Gallery Picker Launcher (Full Lesson)
+    val multiImageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 10)
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            val bitmaps = uris.mapNotNull { decodeBitmapFromUri(it) }
+            if (bitmaps.isNotEmpty()) {
+                selectedImageUri = uris.firstOrNull()
+                runOcrOnBitmaps(bitmaps, "${bitmaps.size} பக்கங்கள்")
+            } else {
+                Toast.makeText(context, "படங்களை ஏற்றுவதில் பிழை ஏற்பட்டது.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // 4. PDF Document Picker Launcher (Full Lesson PDF)
+    val pdfLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            val bitmaps = renderPdfPagesToBitmaps(uri, maxPages = 10)
+            if (bitmaps.isNotEmpty()) {
+                selectedImageUri = uri
+                runOcrOnBitmaps(bitmaps, "PDF (${bitmaps.size} பக்கங்கள்)")
+            } else {
+                Toast.makeText(context, "PDF கோப்பைத் திறக்க முடியவில்லை.", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -435,11 +523,21 @@ fun ImageToTextScreen(
                                         ActivityResultContracts.PickVisualMedia.ImageOnly
                                     )
                                 )
+                            },
+                            onMultiImageClick = {
+                                multiImageLauncher.launch(
+                                    androidx.activity.result.PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                                    )
+                                )
+                            },
+                            onPdfClick = {
+                                pdfLauncher.launch(arrayOf("application/pdf"))
                             }
                         )
                     }
 
-                    // 4 Interactive Navigation Tabs (Rose Gold Accent on Active Tab #B25B7B)
+                    // 5 Interactive Navigation Tabs
                     item {
                         OcrTabsRow(
                             selectedTab = selectedTab,
@@ -517,6 +615,30 @@ fun ImageToTextScreen(
                                             deepTextColor = deepTextColor
                                         )
                                     }
+
+                                    OcrTab.QUESTIONS_ANSWERS -> {
+                                        QuestionsAnswersTabContent(
+                                            questionAnswers = ocrResult.questionAnswers,
+                                            onSpeakQuestionEn = { q -> speak(q, isTamil = false) },
+                                            onSpeakQuestionTa = { q -> speak(q, isTamil = true) },
+                                            onSpeakAnswerEn = { a -> speak(a, isTamil = false) },
+                                            onSpeakAnswerTa = { a -> speak(a, isTamil = true) },
+                                            onSpeakAllEn = {
+                                                val allText = ocrResult.questionAnswers.joinToString(". ") {
+                                                    "Question ${it.questionNumber}. ${it.questionEnglish}. Answer: ${it.answerEnglish}"
+                                                }
+                                                speak(allText, isTamil = false)
+                                            },
+                                            onSpeakAllTa = {
+                                                val allText = ocrResult.questionAnswers.joinToString(". ") {
+                                                    "வினா ${it.questionNumber}. ${it.questionTamil}. விடை: ${it.answerTamil}. ${it.conceptExplanation}"
+                                                }
+                                                speak(allText, isTamil = true)
+                                            },
+                                            accentColor = mauveHeader,
+                                            deepTextColor = deepTextColor
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -541,6 +663,12 @@ fun ImageToTextScreen(
                                 OcrTab.EXPLANATION -> {
                                     val text = "${ocrResult.detailedExplanation.headingTamil}\n\n${ocrResult.detailedExplanation.centralIdea}\n\n${ocrResult.detailedExplanation.practicalApplication}"
                                     copyToClipboard("விளக்கம்", text)
+                                }
+                                OcrTab.QUESTIONS_ANSWERS -> {
+                                    val text = ocrResult.questionAnswers.joinToString("\n\n") {
+                                        "Q${it.questionNumber} [${it.questionType}]: ${it.questionEnglish}\nகேள்வி: ${it.questionTamil}\nAnswer: ${it.answerEnglish}\nவிடை: ${it.answerTamil}"
+                                    }
+                                    copyToClipboard("பாட வினா-விடைகள்", text)
                                 }
                             }
                         },
@@ -573,6 +701,7 @@ fun ImageToTextScreen(
                                     OcrTab.EXTRACTED_TEXT -> "ஆங்கில உரையை நகலெடு"
                                     OcrTab.KEY_WORDS -> "சொற்களை நகலெடு"
                                     OcrTab.EXPLANATION -> "விளக்கத்தை நகலெடு"
+                                    OcrTab.QUESTIONS_ANSWERS -> "வினா-விடைகளை நகலெடு"
                                 },
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
@@ -767,7 +896,9 @@ private fun BookImagePreviewCard(
     deepTextColor: Color,
     mauveHeader: Color,
     onCameraClick: () -> Unit,
-    onGalleryClick: () -> Unit
+    onGalleryClick: () -> Unit,
+    onMultiImageClick: () -> Unit,
+    onPdfClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -842,37 +973,44 @@ private fun BookImagePreviewCard(
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 2.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Text(
-                    text = if (bitmap != null) "✓ படம்" else "உதாரணப் புத்தகம்",
-                    fontSize = 12.sp,
-                    color = mauveHeader,
-                    fontStyle = FontStyle.Italic,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    modifier = Modifier.weight(1f, fill = false)
-                )
-
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (bitmap != null) "✓ புத்தகம் தயாராக உள்ளது" else "உதாரணப் புத்தகம்",
+                        fontSize = 12.sp,
+                        color = mauveHeader,
+                        fontStyle = FontStyle.Italic,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                }
+
+                // Row 1: Single image inputs
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Button(
                         onClick = onCameraClick,
                         modifier = Modifier
+                            .weight(1f)
                             .height(34.dp)
                             .clip(RoundedCornerShape(50.dp))
                             .background(buttonGradient)
                             .testTag("ocr_camera_btn"),
                         shape = RoundedCornerShape(50.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.PhotoCamera,
@@ -887,13 +1025,14 @@ private fun BookImagePreviewCard(
                     Button(
                         onClick = onGalleryClick,
                         modifier = Modifier
+                            .weight(1f)
                             .height(34.dp)
                             .clip(RoundedCornerShape(50.dp))
                             .background(buttonGradient)
                             .testTag("ocr_gallery_btn"),
                         shape = RoundedCornerShape(50.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.PhotoLibrary,
@@ -903,6 +1042,56 @@ private fun BookImagePreviewCard(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Gallery", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                // Row 2: Full Lesson inputs (Multiple Images & PDF)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Button(
+                        onClick = onMultiImageClick,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(34.dp)
+                            .clip(RoundedCornerShape(50.dp))
+                            .background(buttonGradient)
+                            .testTag("ocr_multi_image_btn"),
+                        shape = RoundedCornerShape(50.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Collections,
+                            contentDescription = "Multi Pages",
+                            tint = Color.White,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("📚 பல படங்கள்", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+
+                    Button(
+                        onClick = onPdfClick,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(34.dp)
+                            .clip(RoundedCornerShape(50.dp))
+                            .background(buttonGradient)
+                            .testTag("ocr_pdf_btn"),
+                        shape = RoundedCornerShape(50.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Description,
+                            contentDescription = "PDF Book",
+                            tint = Color.White,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("📄 PDF பாடம்", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -923,20 +1112,21 @@ private fun OcrTabsRow(
             .clip(RoundedCornerShape(20.dp))
             .background(Color.White.copy(alpha = 0.08f))
             .border(BorderStroke(0.5.dp, Color.White.copy(alpha = 0.30f)), RoundedCornerShape(20.dp))
-            .padding(2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+            .horizontalScroll(rememberScrollState())
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         OcrTab.values().forEach { tab ->
             val isSelected = tab == selectedTab
             Box(
                 modifier = Modifier
-                    .weight(1f)
                     .clip(RoundedCornerShape(16.dp))
                     .background(
                         if (isSelected) Color(0xFFB45B80) else Color.Transparent
                     )
                     .clickable { onTabSelected(tab) }
-                    .padding(vertical = 6.dp),
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -1504,6 +1694,502 @@ private fun TamilTranslationTabContent(
                 fontWeight = FontWeight.Normal,
                 modifier = Modifier.padding(8.dp)
             )
+        }
+    }
+}
+
+@Composable
+private fun QuestionsAnswersTabContent(
+    questionAnswers: List<OcrQuestionAnswer>,
+    onSpeakQuestionEn: (String) -> Unit,
+    onSpeakQuestionTa: (String) -> Unit,
+    onSpeakAnswerEn: (String) -> Unit,
+    onSpeakAnswerTa: (String) -> Unit,
+    onSpeakAllEn: () -> Unit,
+    onSpeakAllTa: () -> Unit,
+    accentColor: Color,
+    deepTextColor: Color
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        // Top Header with Title and All-Listen Buttons
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    color = accentColor.copy(alpha = 0.15f),
+                    shape = CircleShape,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Quiz,
+                            contentDescription = null,
+                            tint = accentColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = "வினா - விடைகள் & தீர்வுகள்",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = deepTextColor
+                    )
+                    Text(
+                        text = "${questionAnswers.size} வினாக்கள் / பயிற்சிகள்",
+                        fontSize = 11.sp,
+                        color = accentColor,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            if (questionAnswers.isNotEmpty()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Button(
+                        onClick = onSpeakAllEn,
+                        colors = ButtonDefaults.buttonColors(containerColor = accentColor.copy(alpha = 0.20f)),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.height(30.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                            contentDescription = "Speak English",
+                            tint = deepTextColor,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text("EN", fontSize = 10.sp, color = deepTextColor, fontWeight = FontWeight.Bold)
+                    }
+
+                    Button(
+                        onClick = onSpeakAllTa,
+                        colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.height(30.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                            contentDescription = "Speak Tamil",
+                            tint = Color.White,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text("தமிழ்", fontSize = 10.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
+        HorizontalDivider(
+            color = accentColor.copy(alpha = 0.15f),
+            modifier = Modifier.padding(vertical = 2.dp)
+        )
+
+        if (questionAnswers.isEmpty()) {
+            Surface(
+                color = Color.White.copy(alpha = 0.10f),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.25f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "📖 வினாக்கள் எதுவும் கண்டறியப்படவில்லை",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = deepTextColor
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "புத்தகத்தின் பயிற்சிப் பக்கங்களை கேமரா மூலமாகவோ, பல படங்களாகவோ (Multi-Pages) அல்லது PDF கோப்பாகவோ தேர்வு செய்து ஸ்கேன் செய்யவும். கேள்விகள் மற்றும் கணக்குகளுக்கான படிநிலைகள் தானாக இங்கே தோன்றும்.",
+                        fontSize = 12.sp,
+                        color = deepTextColor.copy(alpha = 0.8f),
+                        textAlign = TextAlign.Center,
+                        lineHeight = 18.sp
+                    )
+                }
+            }
+        } else {
+            for (qa in questionAnswers) {
+                QuestionAnswerCard(
+                    qa = qa,
+                    onSpeakQuestionEn = onSpeakQuestionEn,
+                    onSpeakQuestionTa = onSpeakQuestionTa,
+                    onSpeakAnswerEn = onSpeakAnswerEn,
+                    onSpeakAnswerTa = onSpeakAnswerTa,
+                    accentColor = accentColor,
+                    deepTextColor = deepTextColor
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuestionAnswerCard(
+    qa: OcrQuestionAnswer,
+    onSpeakQuestionEn: (String) -> Unit,
+    onSpeakQuestionTa: (String) -> Unit,
+    onSpeakAnswerEn: (String) -> Unit,
+    onSpeakAnswerTa: (String) -> Unit,
+    accentColor: Color,
+    deepTextColor: Color
+) {
+    Surface(
+        color = Color.White.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.35f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // Header Row: Question Number Badge + Type Tag
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Surface(
+                        color = accentColor,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = "Q${qa.questionNumber.ifBlank { "•" }}",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+
+                    if (qa.questionType.isNotBlank()) {
+                        Surface(
+                            color = Color(0xFF6B4E71).copy(alpha = 0.20f),
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(0.5.dp, accentColor.copy(alpha = 0.3f))
+                        ) {
+                            Text(
+                                text = qa.questionType,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = deepTextColor,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Question Section (English & Tamil with individual speaker buttons)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White.copy(alpha = 0.10f), RoundedCornerShape(12.dp))
+                    .padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                if (qa.questionEnglish.isNotBlank()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = qa.questionEnglish,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = deepTextColor,
+                            lineHeight = 18.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(
+                            onClick = { onSpeakQuestionEn(qa.questionEnglish) },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                                contentDescription = "Listen English Question",
+                                tint = accentColor,
+                                modifier = Modifier.size(17.dp)
+                            )
+                        }
+                    }
+                }
+
+                if (qa.questionTamil.isNotBlank()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = qa.questionTamil,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = deepTextColor.copy(alpha = 0.90f),
+                            lineHeight = 18.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(
+                            onClick = { onSpeakQuestionTa(qa.questionTamil) },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                                contentDescription = "Listen Tamil Question",
+                                tint = accentColor,
+                                modifier = Modifier.size(17.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Step-by-Step Working (Maths and practical problems)
+            if (qa.stepByStepWorking.isNotEmpty()) {
+                Surface(
+                    color = Color(0xFFF9A825).copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(0.5.dp, Color(0xFFF9A825).copy(alpha = 0.35f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Calculate,
+                                contentDescription = null,
+                                tint = Color(0xFFE65100),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "📐 தீர்க்கும் முறை (Step-by-Step Working):",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = deepTextColor
+                            )
+                        }
+
+                        for (step in qa.stepByStepWorking) {
+                            Text(
+                                text = "• $step",
+                                fontSize = 12.sp,
+                                color = deepTextColor,
+                                lineHeight = 17.sp,
+                                modifier = Modifier.padding(start = 6.dp, top = 2.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Answer Section (English & Tamil with individual speaker buttons)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF2E7D32).copy(alpha = 0.10f), RoundedCornerShape(12.dp))
+                    .border(BorderStroke(0.5.dp, Color(0xFF2E7D32).copy(alpha = 0.25f)), RoundedCornerShape(12.dp))
+                    .padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = "✓ விடை (Answer):",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1B5E20)
+                )
+
+                if (qa.answerEnglish.isNotBlank()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = qa.answerEnglish,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = deepTextColor,
+                            lineHeight = 18.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(
+                            onClick = { onSpeakAnswerEn(qa.answerEnglish) },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                                contentDescription = "Listen English Answer",
+                                tint = Color(0xFF2E7D32),
+                                modifier = Modifier.size(17.dp)
+                            )
+                        }
+                    }
+                }
+
+                if (qa.answerTamil.isNotBlank()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = qa.answerTamil,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = deepTextColor,
+                            lineHeight = 18.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(
+                            onClick = { onSpeakAnswerTa(qa.answerTamil) },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                                contentDescription = "Listen Tamil Answer",
+                                tint = Color(0xFF2E7D32),
+                                modifier = Modifier.size(17.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Concept / Method Explanation (எப்படி செய்ய வேண்டும் என்ற விளக்கம்)
+            if (qa.conceptExplanation.isNotBlank()) {
+                Surface(
+                    color = Color(0xFF1565C0).copy(alpha = 0.10f),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(0.5.dp, Color(0xFF1565C0).copy(alpha = 0.25f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Lightbulb,
+                                    contentDescription = null,
+                                    tint = Color(0xFF1565C0),
+                                    modifier = Modifier.size(17.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "💡 எப்படி செய்ய வேண்டும்? (விளக்கம்):",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF0D47A1)
+                                )
+                            }
+                            IconButton(
+                                onClick = { onSpeakAnswerTa(qa.conceptExplanation) },
+                                modifier = Modifier.size(26.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                                    contentDescription = "Listen Explanation",
+                                    tint = Color(0xFF1565C0),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                        Text(
+                            text = qa.conceptExplanation,
+                            fontSize = 12.sp,
+                            color = deepTextColor,
+                            lineHeight = 17.sp
+                        )
+                    }
+                }
+            }
+
+            // Practical / Real-Life Application (அன்றாட வாழ்வில் இதன் பயன்பாடு)
+            if (qa.practicalApplication.isNotBlank()) {
+                Surface(
+                    color = Color(0xFF6A1B9A).copy(alpha = 0.10f),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(0.5.dp, Color(0xFF6A1B9A).copy(alpha = 0.25f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Public,
+                                    contentDescription = null,
+                                    tint = Color(0xFF6A1B9A),
+                                    modifier = Modifier.size(17.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "🌱 நடைமுறைப் பயன்பாடு (Real-Life Application):",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF4A148C)
+                                )
+                            }
+                            IconButton(
+                                onClick = { onSpeakAnswerTa(qa.practicalApplication) },
+                                modifier = Modifier.size(26.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                                    contentDescription = "Listen Practical Application",
+                                    tint = Color(0xFF6A1B9A),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                        Text(
+                            text = qa.practicalApplication,
+                            fontSize = 12.sp,
+                            color = deepTextColor,
+                            lineHeight = 17.sp
+                        )
+                    }
+                }
+            }
         }
     }
 }

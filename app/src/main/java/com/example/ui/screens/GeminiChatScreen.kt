@@ -514,51 +514,26 @@ fun GeminiChatScreen(
                         }
                     }
 
-                    // Right Actions: Listen Button & Refresh Button
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    // Right Actions: Refresh Button only (matching reference image)
+                    Surface(
+                        shape = CircleShape,
+                        color = Color.White,
+                        shadowElevation = 4.dp,
+                        modifier = Modifier
+                            .size(38.dp)
+                            .testTag("gemini_refresh_button")
                     ) {
-                        // "🔊 Listen Response" Button
-                        Surface(
-                            shape = CircleShape,
-                            color = if (isSpeaking) Color(0xFFFFE4E6) else Color.White,
-                            shadowElevation = 4.dp,
-                            modifier = Modifier
-                                .size(38.dp)
-                                .testTag("gemini_listen_tab_button")
-                        ) {
-                            IconButton(onClick = { extractAndSpeakLatestResponse() }) {
-                                Icon(
-                                    imageVector = if (isSpeaking) Icons.Default.Close else Icons.Default.VolumeUp,
-                                    contentDescription = if (isSpeaking) "Stop Reading" else "Listen AI Response",
-                                    tint = if (isSpeaking) Color(0xFFE11D48) else SubikshaRoyalPurple,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-
-                        // Refresh Button
-                        Surface(
-                            shape = CircleShape,
-                            color = Color.White,
-                            shadowElevation = 4.dp,
-                            modifier = Modifier
-                                .size(38.dp)
-                                .testTag("gemini_refresh_button")
-                        ) {
-                            IconButton(onClick = {
-                                stopSpeaking()
-                                hasError = false
-                                webViewInstance?.reload()
-                            }) {
-                                Icon(
-                                    imageVector = Icons.Default.Refresh,
-                                    contentDescription = "Refresh",
-                                    tint = SubikshaNavy,
-                                    modifier = Modifier.size(19.dp)
-                                )
-                            }
+                        IconButton(onClick = {
+                            stopSpeaking()
+                            hasError = false
+                            webViewInstance?.reload()
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Refresh",
+                                tint = SubikshaNavy,
+                                modifier = Modifier.size(19.dp)
+                            )
                         }
                     }
                 }
@@ -582,7 +557,7 @@ fun GeminiChatScreen(
                     Text(text = "💡", fontSize = 12.sp)
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = if (isSpeaking) "🔊 ஆசிரியை வாசிக்கிறார்... நிறுத்த மீண்டும் பொத்தானை அழுத்தவும்" else "பதிலை பெண் ஆசிரியர் குரலில் கேட்க மேலே உள்ள 🔊 பொத்தானை அழுத்தவும்",
+                        text = if (isSpeaking) "🔊 ஆசிரியை வாசிக்கிறார்... நிறுத்த மீண்டும் 🔊 அழுத்தவும்" else "பதிலை ஆசிரியர் குரலில் கேட்க 🔊 பொத்தானை அழுத்தவும்",
                         color = SubikshaNavy,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
@@ -742,108 +717,71 @@ fun GeminiChatScreen(
                     }
                 )
 
-                // Realistic Glass Tactile Touch Buttons: Listen 🔊 on top, Speak 🎙️ below, elevated at bottom = 95.dp on left side
-                Column(
+                // Circular Gradient Icon Buttons matching reference image (Speaker 🔊 + Mic 🎙️ on right side above input bar)
+                Row(
                     modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(start = 14.dp, bottom = 95.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    horizontalAlignment = Alignment.Start
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 16.dp, bottom = 82.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 1. Realistic Glass Listen 🔊 Button
+                    // 1. Purple Gradient Circular Speaker Icon Button (🔊)
                     Surface(
                         onClick = { extractAndSpeakLatestResponse() },
-                        shape = RoundedCornerShape(22.dp),
-                        color = if (isSpeaking) Color(0xFFFFE4E6).copy(alpha = 0.96f) else Color.White.copy(alpha = 0.92f),
-                        border = BorderStroke(
-                            width = 1.2.dp,
-                            brush = if (isSpeaking)
-                                Brush.linearGradient(listOf(Color(0xFFE11D48), Color(0xFFFDA4AF)))
-                            else
-                                Brush.linearGradient(listOf(Color(0xFFC084FC), Color(0xFFE9D5FF), Color.White))
-                        ),
+                        shape = CircleShape,
+                        color = Color.Transparent,
+                        border = BorderStroke(1.5.dp, Color.White),
                         shadowElevation = 8.dp,
                         modifier = Modifier
-                            .wrapContentSize()
+                            .size(48.dp)
                             .testTag("gemini_floating_listen_button")
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    if (isSpeaking)
+                                        Brush.linearGradient(listOf(Color(0xFFF43F5E), Color(0xFFBE123C)))
+                                    else
+                                        Brush.linearGradient(listOf(Color(0xFF8B5CF6), Color(0xFF6D28D9)))
+                                ),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(30.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        if (isSpeaking)
-                                            Brush.linearGradient(listOf(Color(0xFFF43F5E), Color(0xFFBE123C)))
-                                        else
-                                            Brush.linearGradient(listOf(Color(0xFF8B5CF6), Color(0xFF6D28D9)))
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = if (isSpeaking) Icons.Default.Close else Icons.Default.VolumeUp,
-                                    contentDescription = if (isSpeaking) "நிறுத்து" else "கேளுங்கள்",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(17.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (isSpeaking) "நிறுத்து" else "கேளுங்கள் 🔊",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isSpeaking) Color(0xFFBE123C) else SubikshaNavy
+                            Icon(
+                                imageVector = if (isSpeaking) Icons.Default.Close else Icons.Default.VolumeUp,
+                                contentDescription = if (isSpeaking) "Stop Reading" else "Listen AI Response",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                     }
 
-                    // 2. Realistic Glass Speak 🎙️ Button (Below Listen)
+                    // 2. Pink/Magenta Gradient Circular Mic Icon Button (🎙️)
                     Surface(
                         onClick = { checkAndStartListening() },
-                        shape = RoundedCornerShape(22.dp),
-                        color = Color.White.copy(alpha = 0.92f),
-                        border = BorderStroke(
-                            width = 1.2.dp,
-                            brush = Brush.linearGradient(
-                                listOf(Color(0xFFF472B6), Color(0xFFA855F7), Color.White)
-                            )
-                        ),
+                        shape = CircleShape,
+                        color = Color.Transparent,
+                        border = BorderStroke(1.5.dp, Color.White),
                         shadowElevation = 8.dp,
                         modifier = Modifier
-                            .wrapContentSize()
+                            .size(48.dp)
                             .testTag("gemini_floating_mic_button")
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(Color(0xFFEC4899), Color(0xFFE11D48))
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(30.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        Brush.linearGradient(
-                                            listOf(Color(0xFFEC4899), Color(0xFF8B5CF6))
-                                        )
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Mic,
-                                    contentDescription = "பேசுங்கள்",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(17.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "பேசுங்கள் 🎙️",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = SubikshaNavy
+                            Icon(
+                                imageVector = Icons.Default.Mic,
+                                contentDescription = "Speak",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                     }

@@ -18,13 +18,26 @@ data class OcrExplanation(
     val reflectionQuestion: String
 )
 
+data class OcrQuestionAnswer(
+    val questionNumber: String,
+    val questionType: String = "வினா", // e.g. "கணக்கு (Maths Problem)", "True or False", "Choose", "Short Answer", "HOTS", "Grammar"
+    val questionEnglish: String,
+    val questionTamil: String,
+    val answerEnglish: String,
+    val answerTamil: String,
+    val stepByStepWorking: List<String> = emptyList(), // For maths & problem solving (படி 1, படி 2...)
+    val practicalApplication: String = "", // Real-life use / பயன்பாடு (e.g. money, fencing, shop bills)
+    val conceptExplanation: String = "" // How and why to solve this
+)
+
 data class OcrResult(
     val originalHeading: String,
     val rawEnglishText: String,
     val paragraphs: List<String>,
     val keyWords: List<OcrKeyWord>,
     val detailedExplanation: OcrExplanation,
-    val fullTamilTranslation: String
+    val fullTamilTranslation: String,
+    val questionAnswers: List<OcrQuestionAnswer> = emptyList()
 )
 
 object ImageOcrProcessor {
@@ -205,13 +218,56 @@ object ImageOcrProcessor {
                 "பாடப்பகுதியின் மொழிபெயர்ப்பு வெற்றிகரமாக உருவாக்கப்பட்டது."
             }
 
+            // Parse Exhaustive Question & Answer Analysis (Q/A)
+            val qaList = mutableListOf<OcrQuestionAnswer>()
+            val qaArray = root.optJSONArray("questionAnswers")
+            if (qaArray != null) {
+                for (i in 0 until qaArray.length()) {
+                    val qObj = qaArray.optJSONObject(i) ?: continue
+                    val qNum = qObj.optString("questionNumber", "${i + 1}").trim()
+                    val qType = qObj.optString("questionType", "வினா").trim()
+                    val qEn = qObj.optString("questionEnglish", "").ifBlank { qObj.optString("questionText", "") }.trim()
+                    val qTa = qObj.optString("questionTamil", "").trim()
+                    val aEn = qObj.optString("answerEnglish", "").ifBlank { qObj.optString("answerText", "") }.trim()
+                    val aTa = qObj.optString("answerTamil", "").trim()
+                    val app = qObj.optString("practicalApplication", "").trim()
+                    val concept = qObj.optString("conceptExplanation", "").ifBlank { qObj.optString("explanation", "") }.trim()
+
+                    val stepsList = mutableListOf<String>()
+                    val stepsArr = qObj.optJSONArray("stepByStepWorking")
+                    if (stepsArr != null) {
+                        for (s in 0 until stepsArr.length()) {
+                            val st = stepsArr.optString(s, "").trim()
+                            if (st.isNotEmpty()) stepsList.add(st)
+                        }
+                    }
+
+                    if (qEn.isNotEmpty() || aEn.isNotEmpty() || qTa.isNotEmpty()) {
+                        qaList.add(
+                            OcrQuestionAnswer(
+                                questionNumber = qNum,
+                                questionType = qType,
+                                questionEnglish = qEn,
+                                questionTamil = qTa,
+                                answerEnglish = aEn,
+                                answerTamil = aTa,
+                                stepByStepWorking = stepsList,
+                                practicalApplication = app,
+                                conceptExplanation = concept
+                            )
+                        )
+                    }
+                }
+            }
+
             return OcrResult(
                 originalHeading = heading,
                 rawEnglishText = rawEnglish,
                 paragraphs = paragraphsList,
                 keyWords = keyWordsList,
                 detailedExplanation = detailedExplanation,
-                fullTamilTranslation = fullTamilTranslation
+                fullTamilTranslation = fullTamilTranslation,
+                questionAnswers = qaList
             )
         } catch (e: Exception) {
             e.printStackTrace()

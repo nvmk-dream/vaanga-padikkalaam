@@ -9,6 +9,8 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
 import android.speech.RecognizerIntent
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.view.ViewGroup
 import android.webkit.*
 import android.widget.Toast
@@ -51,13 +53,20 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.example.R
 import com.example.ui.theme.*
+import java.util.Locale
 
 class SpeechRecognitionBridge(
-    private val onStartListening: () -> Unit
+    private val onStartListening: () -> Unit,
+    private val onSpeakText: (String) -> Unit
 ) {
     @JavascriptInterface
     fun startListening() {
         onStartListening()
+    }
+
+    @JavascriptInterface
+    fun speakText(text: String) {
+        onSpeakText(text)
     }
 }
 
@@ -72,6 +81,140 @@ fun GeminiChatScreen(
     var isLoading by remember { mutableStateOf(true) }
     var loadProgress by remember { mutableFloatStateOf(0f) }
     var hasError by remember { mutableStateOf(false) }
+
+    // Text to Speech Engine & Voice Pitch Preferences
+    val prefs = remember { context.getSharedPreferences("voice_settings", Context.MODE_PRIVATE) }
+    val englishVoicePitch by remember {
+        mutableFloatStateOf(prefs.getFloat("english_voice_pitch", 1.22f))
+    }
+
+    var ttsEngine by remember { mutableStateOf<TextToSpeech?>(null) }
+    var isTtsReady by remember { mutableStateOf(false) }
+    var isSpeaking by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        val tts = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                isTtsReady = true
+            }
+        }
+        tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) {
+                isSpeaking = true
+            }
+            override fun onDone(utteranceId: String?) {
+                isSpeaking = false
+            }
+            override fun onError(utteranceId: String?) {
+                isSpeaking = false
+            }
+        })
+        ttsEngine = tts
+
+        onDispose {
+            tts.stop()
+            tts.shutdown()
+        }
+    }
+
+    fun stopSpeaking() {
+        ttsEngine?.stop()
+        isSpeaking = false
+    }
+
+    fun speakText(text: String) {
+        if (!isTtsReady || ttsEngine == null || text.isBlank()) return
+        stopSpeaking()
+
+        val isTamil = text.any { it in '\u0B80'..'\u0BFF' }
+        if (isTamil) {
+            val inTaLocale = Locale("ta", "IN")
+            val result = ttsEngine?.setLanguage(inTaLocale)
+            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                try { ttsEngine?.language = Locale("ta") } catch (_: Exception) {}
+            }
+            ttsEngine?.setPitch(1.15f)
+            ttsEngine?.setSpeechRate(0.88f)
+        } else {
+            ttsEngine?.language = Locale.US
+            try {
+                val availableVoices = ttsEngine?.voices
+                val femaleVoice = availableVoices?.firstOrNull { v ->
+                    val name = v.name.lowercase()
+                    (v.locale.language == "en") &&
+                    (name.contains("female") || name.contains("en-us-x-sfg") || name.contains("en-us-x-tpf") || name.contains("en-us-x-iol") || name.contains("#female"))
+                } ?: availableVoices?.firstOrNull { v ->
+                    v.locale.language == "en" && !v.name.lowercase().contains("male")
+                }
+                if (femaleVoice != null) {
+                    ttsEngine?.voice = femaleVoice
+                }
+            } catch (_: Exception) {}
+            ttsEngine?.setPitch(englishVoicePitch)
+            ttsEngine?.setSpeechRate(0.70f)
+        }
+
+        val cleanText = text
+            .replace(Regex("[*#`_~]"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+
+        isSpeaking = true
+        ttsEngine?.speak(cleanText, TextToSpeech.QUEUE_FLUSH, null, "gemini_answer_utterance")
+    }
+
+    fun extractAndSpeakLatestResponse() {
+        if (isSpeaking) {
+            stopSpeaking()
+            Toast.makeText(context, "வாசிப்பு நிறுத்தப்பட்டது (Stopped)", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val js = """
+            (function() {
+                const selectors = [
+                    'message-content',
+                    '.model-response-text',
+                    '.response-container',
+                    '[data-test-id*="model-turn"]',
+                    'div[data-message-author-role="model"]',
+                    '.markdown',
+                    'article'
+                ];
+                for (let i = 0; i < selectors.length; i++) {
+                    const els = document.querySelectorAll(selectors[i]);
+                    if (els.length > 0) {
+                        const t = (els[els.length - 1].innerText || els[els.length - 1].textContent || '').trim();
+                        if (t.length > 0) return t;
+                    }
+                }
+                const pList = Array.from(document.querySelectorAll('p'))
+                    .map(p => (p.innerText || '').trim())
+                    .filter(t => t.length > 15 && !t.includes('Gemini') && !t.includes('Google') && !t.includes('Help'));
+                if (pList.length > 0) {
+                    return pList[pList.length - 1];
+                }
+                return '';
+            })();
+        """.trimIndent()
+
+        webViewInstance?.evaluateJavascript(js) { rawResult ->
+            val unquoted = if (rawResult != null && rawResult != "null" && rawResult != "\"\"") {
+                try {
+                    org.json.JSONTokener(rawResult).nextValue().toString()
+                } catch (_: Exception) {
+                    rawResult.removePrefix("\"").removeSuffix("\"").replace("\\n", "\n").replace("\\\"", "\"")
+                }
+            } else ""
+
+            if (unquoted.isNotBlank()) {
+                speakText(unquoted)
+                Toast.makeText(context, "ஆசிரியை வாசிக்கிறார்...", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "வாசிப்பதற்குப் பதில்கள் எதுவும் இன்னும் வரவில்லை. கேள்வி கேட்ட பிறகு Listen அழுத்தவும்.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     fun injectSpeechPolyfill(webView: WebView?) {
         val polyfillJs = """
@@ -124,8 +267,8 @@ fun GeminiChatScreen(
                 window.webkitSpeechRecognition = SpeechRecognitionPolyfill;
                 window.SpeechRecognition = SpeechRecognitionPolyfill;
 
-                // Hook directly into Gemini web mic buttons
-                function hookMicButtons() {
+                // Hook directly into Gemini web mic buttons and in-page listen buttons
+                function hookWebButtons() {
                     const micBtns = document.querySelectorAll(
                         'button[aria-label*="mic" i], button[aria-label*="voice" i], button[aria-label*="microphone" i], button[aria-label*="மைக்" i], mat-icon[data-mat-icon-name="mic"], button.mic-button, [data-test-id*="mic"]'
                     );
@@ -141,9 +284,31 @@ fun GeminiChatScreen(
                             }, true);
                         }
                     });
+
+                    // Hook in-page 'Listen' / 'Audio' buttons inside Gemini responses
+                    const listenBtns = document.querySelectorAll(
+                        'button[aria-label*="listen" i], button[aria-label*="கேட்க" i], button[aria-label*="read aloud" i], button[aria-label*="audio" i], mat-icon[data-mat-icon-name*="volume"]'
+                    );
+                    listenBtns.forEach(btn => {
+                        if (!btn.__androidListenHooked) {
+                            btn.__androidListenHooked = true;
+                            btn.addEventListener('click', function(e) {
+                                if (window.AndroidBridge) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    const parentMsg = btn.closest('message-content') ||
+                                                      btn.closest('.model-response-text') ||
+                                                      btn.closest('[data-test-id*="model-turn"]') ||
+                                                      btn.closest('article');
+                                    const text = parentMsg ? (parentMsg.innerText || '') : '';
+                                    window.AndroidBridge.speakText(text);
+                                }
+                            }, true);
+                        }
+                    });
                 }
-                hookMicButtons();
-                setInterval(hookMicButtons, 1200);
+                hookWebButtons();
+                setInterval(hookWebButtons, 1200);
             })();
         """.trimIndent()
         webView?.evaluateJavascript(polyfillJs, null)
@@ -240,6 +405,7 @@ fun GeminiChatScreen(
 
     // Intercept Android hardware/gesture back press:
     BackHandler {
+        stopSpeaking()
         if (webViewInstance?.canGoBack() == true) {
             webViewInstance?.goBack()
         } else {
@@ -376,20 +542,20 @@ fun GeminiChatScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // "🔊 Listen Tab" Button
+                        // "🔊 Listen Response" Button
                         Surface(
                             shape = CircleShape,
-                            color = Color.White,
+                            color = if (isSpeaking) Color(0xFFFFE4E6) else Color.White,
                             shadowElevation = 4.dp,
                             modifier = Modifier
                                 .size(38.dp)
                                 .testTag("gemini_listen_tab_button")
                         ) {
-                            IconButton(onClick = { launchGeminiCustomTab(context, geminiUrl) }) {
+                            IconButton(onClick = { extractAndSpeakLatestResponse() }) {
                                 Icon(
-                                    imageVector = Icons.Default.VolumeUp,
-                                    contentDescription = "Listen Voice Tab",
-                                    tint = SubikshaRoyalPurple,
+                                    imageVector = if (isSpeaking) Icons.Default.Close else Icons.Default.VolumeUp,
+                                    contentDescription = if (isSpeaking) "Stop Reading" else "Listen AI Response",
+                                    tint = if (isSpeaking) Color(0xFFE11D48) else SubikshaRoyalPurple,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -405,6 +571,7 @@ fun GeminiChatScreen(
                                 .testTag("gemini_refresh_button")
                         ) {
                             IconButton(onClick = {
+                                stopSpeaking()
                                 hasError = false
                                 webViewInstance?.reload()
                             }) {
@@ -438,7 +605,7 @@ fun GeminiChatScreen(
                     Text(text = "💡", fontSize = 12.sp)
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "பதில்களின் கீழ் உள்ள '...' அழுத்தி Listen மூலம் பெண் குரலில் கேட்கலாம்",
+                        text = if (isSpeaking) "🔊 ஆசிரியை வாசிக்கிறார்... நிறுத்த மீண்டும் பொத்தானை அழுத்தவும்" else "பதிலை பெண் ஆசிரியர் குரலில் கேட்க மேலே உள்ள 🔊 பொத்தானை அழுத்தவும்",
                         color = SubikshaNavy,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
@@ -530,6 +697,15 @@ fun GeminiChatScreen(
                                             checkAndStartListening()
                                         } ?: run {
                                             checkAndStartListening()
+                                        }
+                                    },
+                                    onSpeakText = { text ->
+                                        (context as? Activity)?.runOnUiThread {
+                                            if (text.isNotBlank()) {
+                                                speakText(text)
+                                            } else {
+                                                extractAndSpeakLatestResponse()
+                                            }
                                         }
                                     }
                                 ),

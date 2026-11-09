@@ -37,8 +37,9 @@ class AiVoiceChatService(private val apiKeyManager: ApiKeyManager) {
         preferredLanguage: String
     ): String = withContext(Dispatchers.IO) {
         val trimmedPrompt = prompt.trim()
+        if (trimmedPrompt.isBlank()) return@withContext ""
 
-        // 1. Try real API call if keys are present
+        // 1. If provider is ChatGPT and user provided their OpenAI Key, try OpenAI
         if (provider == AiProvider.CHATGPT) {
             val openAiKey = apiKeyManager.getOpenAiKey()
             if (openAiKey.isNotEmpty()) {
@@ -47,17 +48,27 @@ class AiVoiceChatService(private val apiKeyManager: ApiKeyManager) {
                     if (response.isNotEmpty()) return@withContext response
                 } catch (_: Exception) {}
             }
-        } else {
-            val geminiKey = apiKeyManager.getApiKey()
-            if (geminiKey.isNotEmpty()) {
+        }
+
+        // 2. Call Gemini with Dual Key failover & reliable 3.x models
+        val userKey = apiKeyManager.getUserCustomKey().trim()
+        val key1 = if (userKey.isNotBlank()) userKey else apiKeyManager.getDefaultApiKey().trim()
+        val key2 = apiKeyManager.getRollbackApiKey().trim()
+        val keysToTry = listOf(key1, key2).filter { it.isNotBlank() }.distinct()
+        val models = listOf("gemini-3-flash-preview", "gemini-3.1-flash-lite")
+
+        for (key in keysToTry) {
+            for (model in models) {
                 try {
-                    val response = callGeminiApi(trimmedPrompt, geminiKey, preferredLanguage)
-                    if (response.isNotEmpty()) return@withContext response
+                    val response = callGeminiApi(trimmedPrompt, key, model, preferredLanguage)
+                    if (response.isNotEmpty()) {
+                        return@withContext response
+                    }
                 } catch (_: Exception) {}
             }
         }
 
-        // 2. Intelligent, context-aware bilingual response engine (Matches UI Collage examples)
+        // 3. Fallback response engine only if network/API is completely unavailable
         generateIntelligentResponse(trimmedPrompt, provider, preferredLanguage)
     }
 
@@ -95,16 +106,20 @@ class AiVoiceChatService(private val apiKeyManager: ApiKeyManager) {
                 val jsonObj = JSONObject(body)
                 val choices = jsonObj.getJSONArray("choices")
                 if (choices.length() > 0) {
-                    return choices.getJSONObject(0).getJSONObject("message").getString("content").trim()
+                    val raw = choices.getJSONObject(0).getJSONObject("message").getString("content").trim()
+                    return raw.replace(Regex("[*#`_~]"), "").replace(Regex("\\s+"), " ").trim()
                 }
             }
         }
         return ""
     }
 
-    private fun callGeminiApi(prompt: String, apiKey: String, language: String): String {
-        val systemInstruction = "You are a friendly bilingual Tamil-English voice assistant for Subiksha Teacher App. " +
-                "Respond helpfully in Tamil or English ($language). Keep responses under 4 concise sentences for voice playback."
+    private fun callGeminiApi(prompt: String, apiKey: String, model: String, language: String): String {
+        val systemInstruction = "You are 'Subiksha Teacher AI' (சுபிக்ஷா ஆசிரியர்), a wise, kind, and friendly teacher. " +
+                "The user is speaking to you via real-time voice chat. " +
+                "Directly answer the user's question clearly, warmly, and helpfully in natural spoken Tamil (or English if user asks in English). " +
+                "Keep your answer concise and easy to listen to (3 to 5 clear sentences). " +
+                "Do NOT include markdown formatting like asterisks (*), bullets, bold markers, or hashes (#), so text-to-speech reads it aloud naturally like a caring human teacher."
 
         val json = JSONObject().apply {
             val contents = JSONArray().apply {
@@ -120,7 +135,7 @@ class AiVoiceChatService(private val apiKeyManager: ApiKeyManager) {
             put("contents", contents)
         }
 
-        val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey"
+        val url = "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$apiKey"
         val request = Request.Builder()
             .url(url)
             .header("Content-Type", "application/json")
@@ -136,7 +151,11 @@ class AiVoiceChatService(private val apiKeyManager: ApiKeyManager) {
                     val content = candidates.getJSONObject(0).optJSONObject("content")
                     val parts = content?.optJSONArray("parts")
                     if (parts != null && parts.length() > 0) {
-                        return parts.getJSONObject(0).getString("text").trim()
+                        val rawText = parts.getJSONObject(0).getString("text").trim()
+                        return rawText
+                            .replace(Regex("[*#`_~]"), "")
+                            .replace(Regex("\\s+"), " ")
+                            .trim()
                     }
                 }
             }

@@ -108,7 +108,7 @@ class ApiKeyManager(context: Context) {
 
     // Voice Chat Preferences
     fun getDefaultProvider(): String {
-        return prefs.getString("default_ai_provider", "chatgpt") ?: "chatgpt"
+        return prefs.getString("default_ai_provider", "gemini") ?: "gemini"
     }
 
     fun setDefaultProvider(provider: String) {

@@ -8,6 +8,7 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
+import com.example.data.AppVoiceManager
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -121,18 +122,8 @@ fun VoiceChatScreen(
     DisposableEffect(Unit) {
         val tts = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                val locale = if (preferredLanguage == "en") Locale.US else Locale("ta", "IN")
-                val res = ttsEngine?.setLanguage(locale)
-                if (res == TextToSpeech.LANG_MISSING_DATA || res == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    ttsEngine?.language = Locale.US
-                }
-                ttsEngine?.setPitch(1.15f)
-                val rate = when (voiceSpeed) {
-                    "slow" -> 0.75f
-                    "fast" -> 1.15f
-                    else -> 0.90f
-                }
-                ttsEngine?.setSpeechRate(rate)
+                val isTamil = (preferredLanguage != "en")
+                AppVoiceManager.configureTts(ttsEngine, context, isTamil = isTamil)
                 isTtsReady = true
             }
         }
@@ -148,12 +139,8 @@ fun VoiceChatScreen(
         if (!isTtsReady || ttsEngine == null) return
         ttsEngine?.stop()
         currentlyPlayingMessageId = msgId
-        val rate = when (voiceSpeed) {
-            "slow" -> 0.72f
-            "fast" -> 1.15f
-            else -> 0.88f
-        }
-        ttsEngine?.setSpeechRate(rate)
+        val isTamil = text.any { it in '\u0B80'..'\u0BFF' } || (preferredLanguage != "en")
+        AppVoiceManager.configureTts(ttsEngine, context, isTamil = isTamil)
         ttsEngine?.speak(text, TextToSpeech.QUEUE_FLUSH, null, msgId)
     }
 

@@ -55,29 +55,7 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.launch
 import java.util.Locale
-
-data class VoiceOption(
-    val id: Int,
-    val nameTamil: String,
-    val nameEnglish: String,
-    val pitch: Float,
-    val description: String
-)
-
-val VOICE_OPTIONS = listOf(
-    VoiceOption(1, "Gentle Deep Teacher", "அமைதியான ஆசிரியை", 0.95f, "கம்பீரமான, நிதானமான மிதமான குரல்"),
-    VoiceOption(2, "Calm Classroom Tone", "இயல்பான வகுப்புறை", 1.05f, "இயற்கையான ஆசிரியர் கற்பித்தல் பாணி"),
-    VoiceOption(3, "Warm & Caring Tone", "கனிவான இதமான குரல்", 1.12f, "அன்பான, கனிவான ஆசிரியை பாணி"),
-    VoiceOption(4, "Natural Clear Educator", "மிகத் தெளிவான உச்சரிப்பு", 1.18f, "சமநிலையான தெளிவான ஆசிரியர் குரல்"),
-    VoiceOption(5, "Polished Smart Teacher", "நவீன தெளிவான குரல்", 1.22f, "ஸ்டாண்டர்ட் ஆசிரியை குரல் (தற்போதைய தேர்வு)"),
-    VoiceOption(6, "Bright & Lively", "சுறுசுறுப்பான கற்றல் குரல்", 1.28f, "உற்சாகமான, சுறுசுறுப்பான பாணி"),
-    VoiceOption(7, "Friendly Youthful", "நட்பான பள்ளி ஆசிரியை", 1.34f, "மாணவர்களுக்குப் பிடித்த எளிய குரல்"),
-    VoiceOption(8, "Sweet High Tone", "இனிமையான மெல்லிய சுருதி", 1.40f, "மெல்லிய, இனிமையான பெண் குரல்"),
-    VoiceOption(9, "Cheerful Melody", "குதூகலமான உயர் சுருதி", 1.46f, "உயர்ந்த தெளிவான சுருதி"),
-    VoiceOption(10, "Expressive Light Tone", "குழந்தை பாணி கற்பித்தல்", 1.55f, "மிக மென்மையான வெளிப்படையான குரல்"),
-    VoiceOption(11, "கரகரப்பான பெண் குரல்", "Husky / Raspy Voice", 0.82f, "சற்று கரகரப்பான, தனித்துவ கம்பீர பெண் குரல்"),
-    VoiceOption(12, "சற்று கட்டையான குரல்", "Deep & Thick Voice", 0.88f, "சற்று கட்டையான, அழுத்தமான முதிர்ந்த ஆசிரியை குரல்")
-)
+import com.example.data.AppVoiceManager
 
 enum class OcrTab(val title: String) {
     EXTRACTED_TEXT("உரை"),
@@ -131,12 +109,6 @@ fun ImageToTextScreen(
     // Attached image fixed screen background (Image 1: Sakura Petals theme)
     val backgroundRes = R.drawable.bg_sakura_petals
 
-    val prefs = remember { context.getSharedPreferences("voice_settings", Context.MODE_PRIVATE) }
-    var englishVoicePitch by remember {
-        mutableFloatStateOf(prefs.getFloat("english_voice_pitch", 1.22f))
-    }
-    var showVoiceDialog by remember { mutableStateOf(false) }
-
     // Text to Speech
     var ttsEngine by remember { mutableStateOf<TextToSpeech?>(null) }
     var isTtsReady by remember { mutableStateOf(false) }
@@ -145,9 +117,7 @@ fun ImageToTextScreen(
     DisposableEffect(Unit) {
         val tts = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                ttsEngine?.language = Locale.US
-                ttsEngine?.setPitch(1.15f)
-                ttsEngine?.setSpeechRate(0.88f)
+                AppVoiceManager.configureTts(ttsEngine, context, isTamil = false)
                 isTtsReady = true
             }
         }
@@ -174,70 +144,12 @@ fun ImageToTextScreen(
             .trim()
     }
 
-    fun testVoice(pitch: Float) {
-        if (!isTtsReady || ttsEngine == null) return
-        ttsEngine?.stop()
-        ttsEngine?.language = Locale.US
-        try {
-            val availableVoices = ttsEngine?.voices
-            val femaleVoice = availableVoices?.firstOrNull { v ->
-                val name = v.name.lowercase()
-                (v.locale.language == "en") &&
-                (name.contains("female") || name.contains("en-us-x-sfg") || name.contains("en-us-x-tpf") || name.contains("en-us-x-iol") || name.contains("#female"))
-            } ?: availableVoices?.firstOrNull { v ->
-                v.locale.language == "en" && !v.name.lowercase().contains("male")
-            }
-            if (femaleVoice != null) {
-                ttsEngine?.voice = femaleVoice
-            }
-        } catch (_: Exception) {}
-        ttsEngine?.setPitch(pitch)
-        ttsEngine?.setSpeechRate(0.70f)
-        ttsEngine?.speak(
-            "Hello students! Welcome to our English class. Let us learn together.",
-            TextToSpeech.QUEUE_FLUSH,
-            null,
-            "test_sample_voice"
-        )
-    }
-
     fun speak(text: String, wordTag: String? = null, isTamil: Boolean = false) {
         if (!isTtsReady || ttsEngine == null) return
         ttsEngine?.stop()
         speakingWord = wordTag
 
-        // Set language and voice characteristics based on content
-        if (isTamil) {
-            val inTaLocale = Locale("ta", "IN")
-            val result = ttsEngine?.setLanguage(inTaLocale)
-            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                try {
-                    ttsEngine?.language = Locale("ta")
-                } catch (_: Exception) {}
-            }
-            ttsEngine?.setPitch(1.15f)
-            ttsEngine?.setSpeechRate(0.88f) // Tamil translation speed preserved untouched
-        } else {
-            ttsEngine?.language = Locale.US
-            // Select Female English voice if available on device
-            try {
-                val availableVoices = ttsEngine?.voices
-                val femaleVoice = availableVoices?.firstOrNull { v ->
-                    val name = v.name.lowercase()
-                    (v.locale.language == "en") &&
-                    (name.contains("female") || name.contains("en-us-x-sfg") || name.contains("en-us-x-tpf") || name.contains("en-us-x-iol") || name.contains("#female"))
-                } ?: availableVoices?.firstOrNull { v ->
-                    v.locale.language == "en" && !v.name.lowercase().contains("male")
-                }
-                if (femaleVoice != null) {
-                    ttsEngine?.voice = femaleVoice
-                }
-            } catch (_: Exception) {}
-
-            // Set selected female teacher pitch and slow, calm reading pace (0.70f)
-            ttsEngine?.setPitch(englishVoicePitch)
-            ttsEngine?.setSpeechRate(0.70f)
-        }
+        AppVoiceManager.configureTts(ttsEngine, context, isTamil = isTamil)
 
         val speechText = cleanSpeechText(text, isTamil)
         ttsEngine?.speak(speechText, TextToSpeech.QUEUE_FLUSH, null, wordTag ?: "ocr_speech")
@@ -553,8 +465,6 @@ fun ImageToTextScreen(
                                             ocrResult = ocrResult,
                                             onEdit = { showEditDialog = true },
                                             onSpeak = { speak(ocrResult.rawEnglishText, isTamil = false) },
-                                            onVoiceSelect = { showVoiceDialog = true },
-                                            currentPitch = englishVoicePitch,
                                             onCopy = { copyToClipboard("அசல் ஆங்கில உரை", ocrResult.rawEnglishText) },
                                             accentColor = mauveHeader,
                                             deepTextColor = deepTextColor
@@ -785,141 +695,6 @@ fun ImageToTextScreen(
             dismissButton = {
                 TextButton(onClick = { showEditDialog = false }) {
                     Text("ரத்து (Cancel)", color = mutedTextColor)
-                }
-            },
-            containerColor = Color.White,
-            shape = RoundedCornerShape(22.dp)
-        )
-    }
-
-    // Voice Pitch Selection Dialog (12 Female Voices)
-    if (showVoiceDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                ttsEngine?.stop()
-                showVoiceDialog = false
-            },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        color = mauveHeader.copy(alpha = 0.15f),
-                        shape = CircleShape,
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.RecordVoiceOver,
-                                contentDescription = null,
-                                tint = mauveHeader,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column {
-                        Text(
-                            text = "குரல் தேர்வு (12 பெண் குரல்கள்)",
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = mauveDeep
-                        )
-                        Text(
-                            text = "ஒவ்வொன்றையும் கேட்டு தேர்வு செய்யவும்",
-                            fontSize = 11.sp,
-                            color = mutedTextColor
-                        )
-                    }
-                }
-            },
-            text = {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 420.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(VOICE_OPTIONS.size) { index ->
-                        val option = VOICE_OPTIONS[index]
-                        val isSelected = (englishVoicePitch == option.pitch)
-
-                        Surface(
-                            onClick = {
-                                englishVoicePitch = option.pitch
-                                prefs.edit().putFloat("english_voice_pitch", option.pitch).apply()
-                                testVoice(option.pitch)
-                                Toast.makeText(context, "${option.id}. ${option.nameTamil} தேர்ந்தெடுக்கப்பட்டது!", Toast.LENGTH_SHORT).show()
-                            },
-                            color = if (isSelected) mauveHeader.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.7f),
-                            shape = RoundedCornerShape(14.dp),
-                            border = BorderStroke(
-                                width = if (isSelected) 1.5.dp else 0.5.dp,
-                                color = if (isSelected) roseGoldAccent else Color.LightGray.copy(alpha = 0.6f)
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 10.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = isSelected,
-                                    onClick = {
-                                        englishVoicePitch = option.pitch
-                                        prefs.edit().putFloat("english_voice_pitch", option.pitch).apply()
-                                        testVoice(option.pitch)
-                                        Toast.makeText(context, "${option.id}. ${option.nameTamil} தேர்ந்தெடுக்கப்பட்டது!", Toast.LENGTH_SHORT).show()
-                                    },
-                                    colors = RadioButtonDefaults.colors(selectedColor = mauveHeader),
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "${option.id}. ${option.nameTamil}",
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
-                                        fontSize = 13.sp,
-                                        color = deepTextColor
-                                    )
-                                    Text(
-                                        text = "${option.nameEnglish} • Pitch: ${option.pitch}",
-                                        fontSize = 11.sp,
-                                        color = mutedTextColor
-                                    )
-                                    Text(
-                                        text = option.description,
-                                        fontSize = 10.sp,
-                                        color = mutedTextColor.copy(alpha = 0.8f)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(6.dp))
-                                IconButton(
-                                    onClick = { testVoice(option.pitch) },
-                                    modifier = Modifier.size(34.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                                        contentDescription = "Test Voice ${option.id}",
-                                        tint = if (isSelected) mauveHeader else roseGoldAccent,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        ttsEngine?.stop()
-                        showVoiceDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = mauveHeader),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("சரி (Done)", color = Color.White)
                 }
             },
             containerColor = Color.White,
@@ -1182,13 +957,12 @@ private fun ExtractedTextTabContent(
     ocrResult: OcrResult,
     onEdit: () -> Unit,
     onSpeak: () -> Unit,
-    onVoiceSelect: () -> Unit,
-    currentPitch: Float,
     onCopy: () -> Unit,
     accentColor: Color,
     deepTextColor: Color
 ) {
-    val currentVoice = VOICE_OPTIONS.firstOrNull { it.pitch == currentPitch } ?: VOICE_OPTIONS[4]
+    val context = LocalContext.current
+    val currentVoice = AppVoiceManager.getSelectedVoice(context)
 
     Column {
         Row(
@@ -1220,7 +994,6 @@ private fun ExtractedTextTabContent(
                         color = deepTextColor
                     )
                     Surface(
-                        onClick = onVoiceSelect,
                         color = accentColor.copy(alpha = 0.12f),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.padding(top = 2.dp)
@@ -1237,7 +1010,7 @@ private fun ExtractedTextTabContent(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "${currentVoice.id}. ${currentVoice.nameTamil} (${currentVoice.pitch})",
+                                text = "ஆசிரியர் குரல்: ${currentVoice.titleTamil}",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = accentColor
@@ -1260,14 +1033,6 @@ private fun ExtractedTextTabContent(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                         contentDescription = "Listen English",
-                        tint = accentColor,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-                IconButton(onClick = onVoiceSelect, modifier = Modifier.size(34.dp)) {
-                    Icon(
-                        imageVector = Icons.Default.Tune,
-                        contentDescription = "Voice Tone Selection (12 Voices)",
                         tint = accentColor,
                         modifier = Modifier.size(18.dp)
                     )

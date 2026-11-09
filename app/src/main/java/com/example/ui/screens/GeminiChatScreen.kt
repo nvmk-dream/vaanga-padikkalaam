@@ -11,6 +11,7 @@ import android.net.Uri
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import com.example.data.AppVoiceManager
 import android.view.ViewGroup
 import android.webkit.*
 import android.widget.Toast
@@ -127,32 +128,7 @@ fun GeminiChatScreen(
         stopSpeaking()
 
         val isTamil = text.any { it in '\u0B80'..'\u0BFF' }
-        if (isTamil) {
-            val inTaLocale = Locale("ta", "IN")
-            val result = ttsEngine?.setLanguage(inTaLocale)
-            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                try { ttsEngine?.language = Locale("ta") } catch (_: Exception) {}
-            }
-            ttsEngine?.setPitch(1.15f)
-            ttsEngine?.setSpeechRate(0.88f)
-        } else {
-            ttsEngine?.language = Locale.US
-            try {
-                val availableVoices = ttsEngine?.voices
-                val femaleVoice = availableVoices?.firstOrNull { v ->
-                    val name = v.name.lowercase()
-                    (v.locale.language == "en") &&
-                    (name.contains("female") || name.contains("en-us-x-sfg") || name.contains("en-us-x-tpf") || name.contains("en-us-x-iol") || name.contains("#female"))
-                } ?: availableVoices?.firstOrNull { v ->
-                    v.locale.language == "en" && !v.name.lowercase().contains("male")
-                }
-                if (femaleVoice != null) {
-                    ttsEngine?.voice = femaleVoice
-                }
-            } catch (_: Exception) {}
-            ttsEngine?.setPitch(englishVoicePitch)
-            ttsEngine?.setSpeechRate(0.70f)
-        }
+        AppVoiceManager.configureTts(ttsEngine, context, isTamil = isTamil)
 
         val cleanText = text
             .replace(Regex("[*#`_~]"), " ")

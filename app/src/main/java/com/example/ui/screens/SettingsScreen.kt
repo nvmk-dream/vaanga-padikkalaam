@@ -20,7 +20,10 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.speech.tts.TextToSpeech
 import com.example.data.ApiKeyManager
+import com.example.data.AppVoiceManager
+import com.example.data.AppVoiceProfile
 import com.example.ui.components.ApiKeyDialog
 import com.example.ui.components.AppHeader
 import com.example.ui.theme.*
@@ -36,6 +39,35 @@ fun SettingsScreen(
     var hasValidKey by remember { mutableStateOf(apiKeyManager.hasValidKey()) }
     var isSoundEnabled by remember { mutableStateOf(true) }
     var isTamilNotificationEnabled by remember { mutableStateOf(true) }
+
+    var selectedVoice by remember { mutableStateOf(AppVoiceManager.getSelectedVoice(context)) }
+    var testingVoiceId by remember { mutableStateOf<String?>(null) }
+    var ttsEngine by remember { mutableStateOf<TextToSpeech?>(null) }
+
+    DisposableEffect(Unit) {
+        val tts = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                AppVoiceManager.configureTts(ttsEngine, context, isTamil = false)
+            }
+        }
+        ttsEngine = tts
+        onDispose {
+            tts.stop()
+            tts.shutdown()
+        }
+    }
+
+    fun testVoiceProfile(profile: AppVoiceProfile) {
+        ttsEngine?.stop()
+        testingVoiceId = profile.id
+        AppVoiceManager.configureTts(ttsEngine, context, isTamil = false, overrideProfile = profile)
+        ttsEngine?.speak(
+            "Hello students! This is Subiksha Teacher. Let us learn together.",
+            TextToSpeech.QUEUE_FLUSH,
+            null,
+            "test_settings_voice"
+        )
+    }
 
     if (showKeyDialog) {
         ApiKeyDialog(
@@ -137,6 +169,127 @@ fun SettingsScreen(
                             contentDescription = null,
                             tint = SubikshaRoyalPurple
                         )
+                    }
+                }
+            }
+
+            // Teacher Voice Selection Section (2 User-Selected Voices)
+            item {
+                Card(
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFFB25B7B).copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.RecordVoiceOver,
+                                    contentDescription = null,
+                                    tint = Color(0xFFB25B7B),
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "ஆசிரியர் குரல் தேர்வு (Teacher Voice)",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = SubikshaNavy
+                                )
+                                Text(
+                                    text = "செயலியின் அனைத்துப் பகுதிகளுக்கும் இக்குரலே ஒலிக்கும்",
+                                    fontSize = 11.sp,
+                                    color = SubikshaTextMuted
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        AppVoiceManager.ALL_VOICES.forEach { profile ->
+                            val isSelected = (selectedVoice.id == profile.id)
+                            Surface(
+                                onClick = {
+                                    selectedVoice = profile
+                                    AppVoiceManager.setSelectedVoice(context, profile.id)
+                                    testVoiceProfile(profile)
+                                },
+                                shape = RoundedCornerShape(14.dp),
+                                color = if (isSelected) Color(0xFFB25B7B).copy(alpha = 0.10f) else Color(0xFFF9F7FA),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    if (isSelected) 1.5.dp else 0.5.dp,
+                                    if (isSelected) Color(0xFFB25B7B) else Color(0xFFE5D5DD)
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = isSelected,
+                                        onClick = {
+                                            selectedVoice = profile
+                                            AppVoiceManager.setSelectedVoice(context, profile.id)
+                                            testVoiceProfile(profile)
+                                        },
+                                        colors = RadioButtonDefaults.colors(
+                                            selectedColor = Color(0xFFB25B7B)
+                                        )
+                                    )
+
+                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = profile.titleTamil,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = SubikshaNavy
+                                        )
+                                        Text(
+                                            text = profile.toneDescription,
+                                            fontSize = 12.sp,
+                                            color = Color(0xFF8A4867),
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        Text(
+                                            text = profile.styleNote,
+                                            fontSize = 10.sp,
+                                            color = SubikshaTextMuted
+                                        )
+                                    }
+
+                                    IconButton(
+                                        onClick = { testVoiceProfile(profile) },
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(RoundedCornerShape(50))
+                                            .background(
+                                                if (testingVoiceId == profile.id) Color(0xFFB25B7B) else Color(0xFFB25B7B).copy(alpha = 0.15f)
+                                            )
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.VolumeUp,
+                                            contentDescription = "Test Voice",
+                                            tint = if (testingVoiceId == profile.id) Color.White else Color(0xFFB25B7B),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

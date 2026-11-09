@@ -252,52 +252,56 @@ fun HomeScreen(
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
-                        .padding(end = 8.dp)
-                        .size(48.dp),
+                        .padding(end = 6.dp)
+                        .size(54.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Clickable avatar area
+                    // Profile Image: Custom photo if selected, otherwise Default Teacher Avatar
                     if (customBitmap != null) {
                         Image(
                             bitmap = customBitmap.asImageBitmap(),
                             contentDescription = "Custom Profile Avatar",
                             modifier = Modifier
-                                .size(38.dp)
+                                .size(48.dp)
                                 .clip(CircleShape)
-                                .border(1.5.dp, Color.White, CircleShape)
+                                .border(2.dp, Color.White, CircleShape)
                                 .clickable { showProfileOptionsDialog = true }
                                 .testTag("header_profile_button"),
                             contentScale = ContentScale.Crop
                         )
-                        // Online green indicator dot
-                        Box(
-                            modifier = Modifier
-                                .size(9.dp)
-                                .align(Alignment.BottomEnd)
-                                .offset(x = (-4).dp, y = (-2).dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFF10B981))
-                                .border(1.dp, Color.White, CircleShape)
-                        )
                     } else {
-                        // Invisible touch target over the banner's default teacher face
-                        Box(
+                        Image(
+                            painter = painterResource(id = R.drawable.teacher_avatar),
+                            contentDescription = "Default Teacher Avatar",
                             modifier = Modifier
-                                .size(40.dp)
+                                .size(48.dp)
                                 .clip(CircleShape)
+                                .border(2.dp, Color.White, CircleShape)
                                 .clickable { showProfileOptionsDialog = true }
-                                .testTag("header_profile_button")
+                                .testTag("header_profile_button"),
+                            contentScale = ContentScale.Crop
                         )
                     }
+
+                    // Online green indicator dot
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .align(Alignment.BottomEnd)
+                            .offset(x = (-4).dp, y = (-3).dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF10B981))
+                            .border(1.5.dp, Color.White, CircleShape)
+                    )
 
                     // Direct 1-tap Camera/Gallery upload badge
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
-                            .size(18.dp)
+                            .size(20.dp)
                             .clip(CircleShape)
                             .background(SubikshaRoyalPurple)
-                            .border(1.dp, Color.White, CircleShape)
+                            .border(1.5.dp, Color.White, CircleShape)
                             .clickable {
                                 photoPickerLauncher.launch(
                                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
@@ -309,7 +313,7 @@ fun HomeScreen(
                             imageVector = Icons.Default.CameraAlt,
                             contentDescription = "Change Profile Picture",
                             tint = Color.White,
-                            modifier = Modifier.size(10.dp)
+                            modifier = Modifier.size(11.dp)
                         )
                     }
                 }

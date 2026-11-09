@@ -150,7 +150,7 @@ fun ImageToTextScreen(
         ttsEngine?.stop()
         speakingWord = wordTag
 
-        // Set language based on content
+        // Set language and voice characteristics based on content
         if (isTamil) {
             val inTaLocale = Locale("ta", "IN")
             val result = ttsEngine?.setLanguage(inTaLocale)
@@ -159,8 +159,28 @@ fun ImageToTextScreen(
                     ttsEngine?.language = Locale("ta")
                 } catch (_: Exception) {}
             }
+            ttsEngine?.setPitch(1.15f)
+            ttsEngine?.setSpeechRate(0.88f) // Tamil translation speed preserved untouched
         } else {
             ttsEngine?.language = Locale.US
+            // Select Female English voice if available on device
+            try {
+                val availableVoices = ttsEngine?.voices
+                val femaleVoice = availableVoices?.firstOrNull { v ->
+                    val name = v.name.lowercase()
+                    (v.locale.language == "en") &&
+                    (name.contains("female") || name.contains("en-us-x-sfg") || name.contains("en-us-x-tpf") || name.contains("en-us-x-iol") || name.contains("#female"))
+                } ?: availableVoices?.firstOrNull { v ->
+                    v.locale.language == "en" && !v.name.lowercase().contains("male")
+                }
+                if (femaleVoice != null) {
+                    ttsEngine?.voice = femaleVoice
+                }
+            } catch (_: Exception) {}
+
+            // Set natural female teacher pitch and slow, calm reading pace (0.70f)
+            ttsEngine?.setPitch(1.22f)
+            ttsEngine?.setSpeechRate(0.70f)
         }
 
         val speechText = cleanSpeechText(text, isTamil)

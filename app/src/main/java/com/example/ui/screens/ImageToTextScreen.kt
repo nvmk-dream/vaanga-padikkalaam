@@ -995,103 +995,150 @@ private fun BookImagePreviewCard(
                     )
                 }
 
-                // Row 1: Single image inputs
+                // Perfectly Spaced 2x2 Action Buttons (No overlap, clean alignment)
+                // Row 1: Single image inputs (Camera & Gallery)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Button(
+                    Surface(
                         onClick = onCameraClick,
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFF6B21A8).copy(alpha = 0.88f),
+                        border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.40f)),
+                        shadowElevation = 2.dp,
                         modifier = Modifier
                             .weight(1f)
-                            .height(34.dp)
-                            .clip(RoundedCornerShape(50.dp))
-                            .background(buttonGradient)
-                            .testTag("ocr_camera_btn"),
-                        shape = RoundedCornerShape(50.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            .height(36.dp)
+                            .testTag("ocr_camera_btn")
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.PhotoCamera,
-                            contentDescription = "Camera",
-                            tint = Color.White,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Camera", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PhotoCamera,
+                                contentDescription = "Camera",
+                                tint = Color.White,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Camera",
+                                fontSize = 12.sp,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                        }
                     }
 
-                    Button(
+                    Surface(
                         onClick = onGalleryClick,
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFF6B21A8).copy(alpha = 0.88f),
+                        border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.40f)),
+                        shadowElevation = 2.dp,
                         modifier = Modifier
                             .weight(1f)
-                            .height(34.dp)
-                            .clip(RoundedCornerShape(50.dp))
-                            .background(buttonGradient)
-                            .testTag("ocr_gallery_btn"),
-                        shape = RoundedCornerShape(50.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            .height(36.dp)
+                            .testTag("ocr_gallery_btn")
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.PhotoLibrary,
-                            contentDescription = "Gallery",
-                            tint = Color.White,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Gallery", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PhotoLibrary,
+                                contentDescription = "Gallery",
+                                tint = Color.White,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Gallery",
+                                fontSize = 12.sp,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                        }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(4.dp))
 
                 // Row 2: Full Lesson inputs (Multiple Images & PDF)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Button(
+                    Surface(
                         onClick = onMultiImageClick,
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFF581C87).copy(alpha = 0.90f),
+                        border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.40f)),
+                        shadowElevation = 2.dp,
                         modifier = Modifier
                             .weight(1f)
-                            .height(34.dp)
-                            .clip(RoundedCornerShape(50.dp))
-                            .background(buttonGradient)
-                            .testTag("ocr_multi_image_btn"),
-                        shape = RoundedCornerShape(50.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            .height(36.dp)
+                            .testTag("ocr_multi_image_btn")
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Collections,
-                            contentDescription = "Multi Pages",
-                            tint = Color.White,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("📚 பல படங்கள்", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Collections,
+                                contentDescription = "Multi Pages",
+                                tint = Color.White,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "📚 பல படங்கள்",
+                                fontSize = 11.sp,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                        }
                     }
 
-                    Button(
+                    Surface(
                         onClick = onPdfClick,
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFF581C87).copy(alpha = 0.90f),
+                        border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.40f)),
+                        shadowElevation = 2.dp,
                         modifier = Modifier
                             .weight(1f)
-                            .height(34.dp)
-                            .clip(RoundedCornerShape(50.dp))
-                            .background(buttonGradient)
-                            .testTag("ocr_pdf_btn"),
-                        shape = RoundedCornerShape(50.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            .height(36.dp)
+                            .testTag("ocr_pdf_btn")
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Description,
-                            contentDescription = "PDF Book",
-                            tint = Color.White,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("📄 PDF பாடம்", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Description,
+                                contentDescription = "PDF Book",
+                                tint = Color.White,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "📄 PDF பாடம்",
+                                fontSize = 11.sp,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                        }
                     }
                 }
             }

@@ -288,7 +288,7 @@ private fun BooksOverviewView(
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.EditDocument,
+                        imageVector = Icons.Default.Edit,
                         contentDescription = null,
                         tint = SubikshaRoyalPurple,
                         modifier = Modifier.size(22.dp)

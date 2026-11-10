@@ -41,6 +41,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import com.example.data.MathMethodDetail
 import com.example.data.MentalMathsTricksData
 import com.example.ui.theme.*
 import kotlinx.coroutines.Dispatchers
@@ -502,6 +506,12 @@ fun MentalMathsPdfViewerScreen(
     var isLoadingPage by remember { mutableStateOf(true) }
     var selectedTrickIndex by remember { mutableIntStateOf(0) }
     var speakingTrickText by remember { mutableStateOf<String?>(null) }
+    var showExplanationDialog by remember { mutableStateOf(false) }
+
+    // Pinch-to-zoom & Pan gesture states
+    var zoomScale by remember { mutableFloatStateOf(1f) }
+    var panOffsetX by remember { mutableFloatStateOf(0f) }
+    var panOffsetY by remember { mutableFloatStateOf(0f) }
 
     // Intercept Back Press
     BackHandler {
@@ -512,6 +522,9 @@ fun MentalMathsPdfViewerScreen(
     // Load PDF Page Bitmap
     LaunchedEffect(book.assetFileName, currentPageIndex) {
         isLoadingPage = true
+        zoomScale = 1f
+        panOffsetX = 0f
+        panOffsetY = 0f
         withContext(Dispatchers.IO) {
             try {
                 val tempFile = File(context.cacheDir, "temp_${book.assetFileName}")
@@ -770,37 +783,269 @@ fun MentalMathsPdfViewerScreen(
             }
         }
     ) { innerPadding ->
-        Box(
+        val currentDetail = remember(book.title, currentPageIndex, selectedTrickIndex) {
+            MentalMathsTricksData.getDetailedExplanation(book.title, currentPageIndex, selectedTrickIndex)
+        }
+
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFE2E8F0))
-                .padding(innerPadding),
-            contentAlignment = Alignment.Center
+                .padding(innerPadding)
         ) {
-            if (isLoadingPage) {
-                CircularProgressIndicator(color = book.accentColor)
-            } else if (currentBitmap != null) {
-                Card(
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(12.dp)
-                ) {
-                    Image(
-                        bitmap = currentBitmap!!.asImageBitmap(),
-                        contentDescription = "PDF Page ${currentPageIndex + 1}",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Fit
+            // 1. PDF Page with Pinch-to-Zoom & Pan
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1.15f)
+                    .clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp))
+                    .background(Color(0xFFCBD5E1)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isLoadingPage) {
+                    CircularProgressIndicator(color = book.accentColor)
+                } else if (currentBitmap != null) {
+                    Card(
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(8.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .pointerInput(Unit) {
+                                detectTransformGestures { _, pan, zoom, _ ->
+                                    zoomScale = (zoomScale * zoom).coerceIn(1f, 4.5f)
+                                    if (zoomScale > 1f) {
+                                        panOffsetX += pan.x
+                                        panOffsetY += pan.y
+                                    } else {
+                                        panOffsetX = 0f
+                                        panOffsetY = 0f
+                                    }
+                                }
+                            }
+                    ) {
+                        Image(
+                            bitmap = currentBitmap!!.asImageBitmap(),
+                            contentDescription = "PDF Page ${currentPageIndex + 1}",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer(
+                                    scaleX = zoomScale,
+                                    scaleY = zoomScale,
+                                    translationX = panOffsetX,
+                                    translationY = panOffsetY
+                                ),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+
+                    // Zoom Helper indicator / Reset button
+                    if (zoomScale > 1.05f) {
+                        Surface(
+                            color = SubikshaNavy.copy(alpha = 0.85f),
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(14.dp)
+                                .clickable {
+                                    zoomScale = 1f
+                                    panOffsetX = 0f
+                                    panOffsetY = 0f
+                                }
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ZoomOutMap,
+                                    contentDescription = "Reset Zoom",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "${(zoomScale * 100).toInt()}% (Reset)",
+                                    fontSize = 11.sp,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    } else {
+                        Surface(
+                            color = Color.Black.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(12.dp)
+                        ) {
+                            Text(
+                                text = "🔍 விரல்களால் பெரிதாக்கலாம் (Pinch to Zoom)",
+                                fontSize = 10.sp,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
+                } else {
+                    Text(
+                        text = "PDF பக்கத்தை ஏற்ற முடியவில்லை.",
+                        color = SubikshaNavy,
+                        fontSize = 14.sp
                     )
                 }
-            } else {
-                Text(
-                    text = "PDF பக்கத்தை ஏற்ற முடியவில்லை.",
-                    color = SubikshaNavy,
-                    fontSize = 14.sp
-                )
+            }
+
+            // 2. Comprehensive 3-Method Step-by-Step Scrollable Explanation Card
+            Card(
+                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(0.85f)
+            ) {
+                val scrollState = rememberScrollState()
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(scrollState)
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                ) {
+                    // Header with Question Example and Speaker
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = currentDetail.title,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = book.accentColor
+                            )
+                            Text(
+                                text = currentDetail.example,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = SubikshaNavy
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { speakTrick(selectedTrickIndex) },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(book.accentColor.copy(alpha = 0.12f))
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.VolumeUp,
+                                contentDescription = "Listen",
+                                tint = book.accentColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Method 1
+                    Surface(
+                        color = Color(0xFFF8FAFC),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text(
+                                text = currentDetail.method1Title,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF0F766E)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            currentDetail.method1Steps.forEach { step ->
+                                Text(
+                                    text = "• $step",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF334155),
+                                    lineHeight = 16.sp
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Method 2
+                    Surface(
+                        color = Color(0xFFF8FAFC),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text(
+                                text = currentDetail.method2Title,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF1D4ED8)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            currentDetail.method2Steps.forEach { step ->
+                                Text(
+                                    text = "• $step",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF334155),
+                                    lineHeight = 16.sp
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Method 3
+                    Surface(
+                        color = Color(0xFFF8FAFC),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text(
+                                text = currentDetail.method3Title,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF7C3AED)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            currentDetail.method3Steps.forEach { step ->
+                                Text(
+                                    text = "• $step",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF334155),
+                                    lineHeight = 16.sp
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    // Tip banner
+                    Text(
+                        text = "💡 குறிப்பு: ${currentDetail.tip}",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF64748B)
+                    )
+                }
             }
         }
     }

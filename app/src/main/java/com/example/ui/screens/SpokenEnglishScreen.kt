@@ -2,6 +2,9 @@ package com.example.ui.screens
 
 import android.speech.tts.TextToSpeech
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.net.Uri
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -249,62 +252,194 @@ private fun BooksOverviewView(
     var book5Title by remember { mutableStateOf(sharedPrefs.getString("book_5_title", "Add Book 5") ?: "Add Book 5") }
     var book6Title by remember { mutableStateOf(sharedPrefs.getString("book_6_title", "Add Book 6") ?: "Add Book 6") }
 
-    // Dialog state for setting custom book titles
+    // Custom file URIs for Books 1 to 6 (saved in SharedPreferences)
+    var book1Uri by remember { mutableStateOf(sharedPrefs.getString("book_1_uri", null)) }
+    var book2Uri by remember { mutableStateOf(sharedPrefs.getString("book_2_uri", null)) }
+    var book3Uri by remember { mutableStateOf(sharedPrefs.getString("book_3_uri", null)) }
+    var book4Uri by remember { mutableStateOf(sharedPrefs.getString("book_4_uri", null)) }
+    var book5Uri by remember { mutableStateOf(sharedPrefs.getString("book_5_uri", null)) }
+    var book6Uri by remember { mutableStateOf(sharedPrefs.getString("book_6_uri", null)) }
+
+    // Dialog state for setting custom book titles & picking files
     var editingBookIndex by remember { mutableStateOf<Int?>(null) }
     var inputDialogTitle by remember { mutableStateOf("") }
+    var selectedFileUri by remember { mutableStateOf<String?>(null) }
+
+    // File Picker Launcher for PDF or Images
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: Exception) {}
+            selectedFileUri = uri.toString()
+            android.widget.Toast.makeText(context, "கோப்பு இணைக்கப்பட்டது!", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
 
     if (editingBookIndex != null) {
+        val bIdx = editingBookIndex!!
         AlertDialog(
             onDismissRequest = { editingBookIndex = null },
             title = {
-                Text(
-                    text = "புத்தகத் தலைப்பை உள்ளிடவும்",
-                    fontWeight = FontWeight.Bold,
-                    color = SubikshaNavy,
-                    fontSize = 17.sp
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.EditDocument,
+                        contentDescription = null,
+                        tint = SubikshaRoyalPurple,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "புத்தகம் $bIdx மேலாண்மை (Book Management)",
+                        fontWeight = FontWeight.Bold,
+                        color = SubikshaNavy,
+                        fontSize = 16.sp
+                    )
+                }
             },
             text = {
-                Column {
+                Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "Book ${editingBookIndex}-க்கான புதிய தலைப்பை உள்ளிட்டு சேமிக்கவும்:",
-                        fontSize = 13.sp,
-                        color = SubikshaTextMuted
+                        text = "புத்தகத் தலைப்பு (Book Title):",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = SubikshaNavy
                     )
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     OutlinedTextField(
                         value = inputDialogTitle,
                         onValueChange = { inputDialogTitle = it },
-                        placeholder = { Text("எ.கா. Grammar Mastery – Book ${editingBookIndex}") },
+                        placeholder = { Text("புத்தகத்தின் பெயர்...") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "புத்தகக் கோப்பு (PDF or Image):",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = SubikshaNavy
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    OutlinedButton(
+                        onClick = { filePickerLauncher.launch("*/*") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = SubikshaRoyalPurple
+                        )
+                    ) {
+                        Icon(
+                            imageVector = if (selectedFileUri != null) Icons.Default.CheckCircle else Icons.Default.UploadFile,
+                            contentDescription = null,
+                            tint = if (selectedFileUri != null) Color(0xFF10B981) else SubikshaRoyalPurple,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (selectedFileUri != null) "கோப்பு தேர்வு செய்யப்பட்டது ✓" else "+ PDF / படம் தேர்வு செய்",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    if (selectedFileUri != null) {
+                        Text(
+                            text = "இணைப்பு: ${selectedFileUri?.substringAfterLast('/')?.take(30)}...",
+                            fontSize = 10.sp,
+                            color = Color(0xFF10B981),
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+
+                    // Reset option for Books 1 and 2
+                    if (bIdx in 1..2 && (selectedFileUri != null || (bIdx == 1 && book1Uri != null) || (bIdx == 2 && book2Uri != null))) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        TextButton(
+                            onClick = {
+                                selectedFileUri = null
+                                if (bIdx == 1) {
+                                    book1Uri = null
+                                    sharedPrefs.edit().remove("book_1_uri").apply()
+                                } else {
+                                    book2Uri = null
+                                    sharedPrefs.edit().remove("book_2_uri").apply()
+                                }
+                                android.widget.Toast.makeText(context, "இயல்புநிலை பாடப் புத்தகத்திற்கு மாற்றப்பட்டது!", android.widget.Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.align(Alignment.End)
+                        ) {
+                            Text("இயல்புநிலைக்கு மாற்று (Restore Default)", fontSize = 11.sp, color = Color(0xFFDC2626))
+                        }
+                    }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        val savedText = inputDialogTitle.trim().ifEmpty { "Add Book $editingBookIndex" }
-                        when (editingBookIndex) {
+                        val savedText = inputDialogTitle.trim()
+                        when (bIdx) {
+                            1 -> {
+                                if (savedText.isNotEmpty()) sharedPrefs.edit().putString("book_1_title", savedText).apply()
+                                if (selectedFileUri != null) {
+                                    book1Uri = selectedFileUri
+                                    sharedPrefs.edit().putString("book_1_uri", selectedFileUri).apply()
+                                }
+                            }
+                            2 -> {
+                                if (savedText.isNotEmpty()) sharedPrefs.edit().putString("book_2_title", savedText).apply()
+                                if (selectedFileUri != null) {
+                                    book2Uri = selectedFileUri
+                                    sharedPrefs.edit().putString("book_2_uri", selectedFileUri).apply()
+                                }
+                            }
                             3 -> {
-                                book3Title = savedText
-                                sharedPrefs.edit().putString("book_3_title", savedText).apply()
+                                val t = savedText.ifEmpty { "Add Book 3" }
+                                book3Title = t
+                                sharedPrefs.edit().putString("book_3_title", t).apply()
+                                if (selectedFileUri != null) {
+                                    book3Uri = selectedFileUri
+                                    sharedPrefs.edit().putString("book_3_uri", selectedFileUri).apply()
+                                }
                             }
                             4 -> {
-                                book4Title = savedText
-                                sharedPrefs.edit().putString("book_4_title", savedText).apply()
+                                val t = savedText.ifEmpty { "Add Book 4" }
+                                book4Title = t
+                                sharedPrefs.edit().putString("book_4_title", t).apply()
+                                if (selectedFileUri != null) {
+                                    book4Uri = selectedFileUri
+                                    sharedPrefs.edit().putString("book_4_uri", selectedFileUri).apply()
+                                }
                             }
                             5 -> {
-                                book5Title = savedText
-                                sharedPrefs.edit().putString("book_5_title", savedText).apply()
+                                val t = savedText.ifEmpty { "Add Book 5" }
+                                book5Title = t
+                                sharedPrefs.edit().putString("book_5_title", t).apply()
+                                if (selectedFileUri != null) {
+                                    book5Uri = selectedFileUri
+                                    sharedPrefs.edit().putString("book_5_uri", selectedFileUri).apply()
+                                }
                             }
                             6 -> {
-                                book6Title = savedText
-                                sharedPrefs.edit().putString("book_6_title", savedText).apply()
+                                val t = savedText.ifEmpty { "Add Book 6" }
+                                book6Title = t
+                                sharedPrefs.edit().putString("book_6_title", t).apply()
+                                if (selectedFileUri != null) {
+                                    book6Uri = selectedFileUri
+                                    sharedPrefs.edit().putString("book_6_uri", selectedFileUri).apply()
+                                }
                             }
                         }
-                        android.widget.Toast.makeText(context, "தலைப்பு வெற்றிகரமாகச் சேமிக்கப்பட்டது!", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(context, "புத்தகம் வெற்றிகரமாகச் சேமிக்கப்பட்டது!", android.widget.Toast.LENGTH_SHORT).show()
                         editingBookIndex = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = SubikshaRoyalPurple),
@@ -428,41 +563,102 @@ private fun BooksOverviewView(
                     .weight(1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Card 1: Book 1
+                // Card 1: Book 1 (With replace option)
                 SpokenBookRowCard(
-                    title = "Spoken English Through Tamil – Book 1",
-                    subtitle = "அன்றாடப் பேச்சு ஆங்கிலம் - புத்தகம் 1",
+                    title = sharedPrefs.getString("book_1_title", "Spoken English Through Tamil – Book 1") ?: "Spoken English Through Tamil – Book 1",
+                    subtitle = if (book1Uri != null) "மாற்றப்பட்ட தனிப்பயன் புத்தகம் (PDF/Image இணைக்கப்பட்டது)" else "அன்றாடப் பேச்சு ஆங்கிலம் - புத்தகம் 1",
                     number = 1,
                     primaryColor = Color(0xFF2563EB),     // Vibrant Royal Blue
                     secondaryColor = Color(0xFF3B82F6),
                     icon = Icons.Default.MenuBook,
+                    hasCustomFile = book1Uri != null,
                     modifier = Modifier.fillMaxWidth().weight(1f),
-                    onClick = { onSelectBook("book_1") }
+                    onClick = {
+                        if (book1Uri != null) {
+                            try {
+                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                                    setDataAndType(Uri.parse(book1Uri), if (book1Uri!!.contains(".pdf", true)) "application/pdf" else "image/*")
+                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(intent)
+                            } catch (_: Exception) {
+                                onSelectBook("book_1")
+                            }
+                        } else {
+                            onSelectBook("book_1")
+                        }
+                    },
+                    onReplace = {
+                        inputDialogTitle = sharedPrefs.getString("book_1_title", "Spoken English Through Tamil – Book 1") ?: ""
+                        selectedFileUri = book1Uri
+                        editingBookIndex = 1
+                    }
                 )
 
-                // Card 2: Book 2
+                // Card 2: Book 2 (With replace option)
                 SpokenBookRowCard(
-                    title = "English Tenses Through Tamil – Book 2",
-                    subtitle = "ஆங்கிலக் காலங்கள் - புத்தகம் 2 (12 Tenses)",
+                    title = sharedPrefs.getString("book_2_title", "English Tenses Through Tamil – Book 2") ?: "English Tenses Through Tamil – Book 2",
+                    subtitle = if (book2Uri != null) "மாற்றப்பட்ட தனிப்பயன் புத்தகம் (PDF/Image இணைக்கப்பட்டது)" else "ஆங்கிலக் காலங்கள் - புத்தகம் 2 (12 Tenses)",
                     number = 2,
                     primaryColor = Color(0xFF0284C7),     // Deep Sky Cyan
                     secondaryColor = Color(0xFF38BDF8),
                     icon = Icons.Default.MenuBook,
+                    hasCustomFile = book2Uri != null,
                     modifier = Modifier.fillMaxWidth().weight(1f),
-                    onClick = { onSelectBook("book_2") }
+                    onClick = {
+                        if (book2Uri != null) {
+                            try {
+                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                                    setDataAndType(Uri.parse(book2Uri), if (book2Uri!!.contains(".pdf", true)) "application/pdf" else "image/*")
+                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(intent)
+                            } catch (_: Exception) {
+                                onSelectBook("book_2")
+                            }
+                        } else {
+                            onSelectBook("book_2")
+                        }
+                    },
+                    onReplace = {
+                        inputDialogTitle = sharedPrefs.getString("book_2_title", "English Tenses Through Tamil – Book 2") ?: ""
+                        selectedFileUri = book2Uri
+                        editingBookIndex = 2
+                    }
                 )
 
                 // Card 3: Add Book 3
                 SpokenBookRowCard(
                     title = book3Title,
-                    subtitle = if (book3Title == "Add Book 3") "புதிய புத்தகத்தைச் சேர்க்க தட்டவும்" else "சேமிக்கப்பட்ட புத்தகம் 3",
+                    subtitle = if (book3Uri != null) "சேமிக்கப்பட்ட ஆவணம் (தட்டினால் திறக்கும்)" else if (book3Title == "Add Book 3") "புதிய PDF/படம் சேர்க்க தட்டவும்" else "சேமிக்கப்பட்ட புத்தகம் 3",
                     number = 3,
                     primaryColor = Color(0xFF059669),     // Emerald Green
                     secondaryColor = Color(0xFF34D399),
-                    icon = Icons.Default.PostAdd,
+                    icon = if (book3Uri != null) Icons.Default.MenuBook else Icons.Default.PostAdd,
+                    hasCustomFile = book3Uri != null,
                     modifier = Modifier.fillMaxWidth().weight(1f),
                     onClick = {
+                        if (book3Uri != null) {
+                            try {
+                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                                    setDataAndType(Uri.parse(book3Uri), if (book3Uri!!.contains(".pdf", true)) "application/pdf" else "image/*")
+                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(intent)
+                            } catch (_: Exception) {
+                                inputDialogTitle = if (book3Title != "Add Book 3") book3Title else ""
+                                selectedFileUri = book3Uri
+                                editingBookIndex = 3
+                            }
+                        } else {
+                            inputDialogTitle = if (book3Title != "Add Book 3") book3Title else ""
+                            selectedFileUri = book3Uri
+                            editingBookIndex = 3
+                        }
+                    },
+                    onReplace = {
                         inputDialogTitle = if (book3Title != "Add Book 3") book3Title else ""
+                        selectedFileUri = book3Uri
                         editingBookIndex = 3
                     }
                 )
@@ -470,14 +666,35 @@ private fun BooksOverviewView(
                 // Card 4: Add Book 4
                 SpokenBookRowCard(
                     title = book4Title,
-                    subtitle = if (book4Title == "Add Book 4") "புதிய புத்தகத்தைச் சேர்க்க தட்டவும்" else "சேமிக்கப்பட்ட புத்தகம் 4",
+                    subtitle = if (book4Uri != null) "சேமிக்கப்பட்ட ஆவணம் (தட்டினால் திறக்கும்)" else if (book4Title == "Add Book 4") "புதிய PDF/படம் சேர்க்க தட்டவும்" else "சேமிக்கப்பட்ட புத்தகம் 4",
                     number = 4,
                     primaryColor = Color(0xFFEA580C),     // Warm Orange
                     secondaryColor = Color(0xFFFB923C),
-                    icon = Icons.Default.PostAdd,
+                    icon = if (book4Uri != null) Icons.Default.MenuBook else Icons.Default.PostAdd,
+                    hasCustomFile = book4Uri != null,
                     modifier = Modifier.fillMaxWidth().weight(1f),
                     onClick = {
+                        if (book4Uri != null) {
+                            try {
+                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                                    setDataAndType(Uri.parse(book4Uri), if (book4Uri!!.contains(".pdf", true)) "application/pdf" else "image/*")
+                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(intent)
+                            } catch (_: Exception) {
+                                inputDialogTitle = if (book4Title != "Add Book 4") book4Title else ""
+                                selectedFileUri = book4Uri
+                                editingBookIndex = 4
+                            }
+                        } else {
+                            inputDialogTitle = if (book4Title != "Add Book 4") book4Title else ""
+                            selectedFileUri = book4Uri
+                            editingBookIndex = 4
+                        }
+                    },
+                    onReplace = {
                         inputDialogTitle = if (book4Title != "Add Book 4") book4Title else ""
+                        selectedFileUri = book4Uri
                         editingBookIndex = 4
                     }
                 )
@@ -485,14 +702,35 @@ private fun BooksOverviewView(
                 // Card 5: Add Book 5
                 SpokenBookRowCard(
                     title = book5Title,
-                    subtitle = if (book5Title == "Add Book 5") "புதிய புத்தகத்தைச் சேர்க்க தட்டவும்" else "சேமிக்கப்பட்ட புத்தகம் 5",
+                    subtitle = if (book5Uri != null) "சேமிக்கப்பட்ட ஆவணம் (தட்டினால் திறக்கும்)" else if (book5Title == "Add Book 5") "புதிய PDF/படம் சேர்க்க தட்டவும்" else "சேமிக்கப்பட்ட புத்தகம் 5",
                     number = 5,
                     primaryColor = Color(0xFF9333EA),     // Royal Purple
                     secondaryColor = Color(0xFFA855F7),
-                    icon = Icons.Default.PostAdd,
+                    icon = if (book5Uri != null) Icons.Default.MenuBook else Icons.Default.PostAdd,
+                    hasCustomFile = book5Uri != null,
                     modifier = Modifier.fillMaxWidth().weight(1f),
                     onClick = {
+                        if (book5Uri != null) {
+                            try {
+                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                                    setDataAndType(Uri.parse(book5Uri), if (book5Uri!!.contains(".pdf", true)) "application/pdf" else "image/*")
+                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(intent)
+                            } catch (_: Exception) {
+                                inputDialogTitle = if (book5Title != "Add Book 5") book5Title else ""
+                                selectedFileUri = book5Uri
+                                editingBookIndex = 5
+                            }
+                        } else {
+                            inputDialogTitle = if (book5Title != "Add Book 5") book5Title else ""
+                            selectedFileUri = book5Uri
+                            editingBookIndex = 5
+                        }
+                    },
+                    onReplace = {
                         inputDialogTitle = if (book5Title != "Add Book 5") book5Title else ""
+                        selectedFileUri = book5Uri
                         editingBookIndex = 5
                     }
                 )
@@ -500,14 +738,35 @@ private fun BooksOverviewView(
                 // Card 6: Add Book 6
                 SpokenBookRowCard(
                     title = book6Title,
-                    subtitle = if (book6Title == "Add Book 6") "புதிய புத்தகத்தைச் சேர்க்க தட்டவும்" else "சேமிக்கப்பட்ட புத்தகம் 6",
+                    subtitle = if (book6Uri != null) "சேமிக்கப்பட்ட ஆவணம் (தட்டினால் திறக்கும்)" else if (book6Title == "Add Book 6") "புதிய PDF/படம் சேர்க்க தட்டவும்" else "சேமிக்கப்பட்ட புத்தகம் 6",
                     number = 6,
                     primaryColor = Color(0xFF0D9488),     // Teal Green
                     secondaryColor = Color(0xFF2DD4BF),
-                    icon = Icons.Default.PostAdd,
+                    icon = if (book6Uri != null) Icons.Default.MenuBook else Icons.Default.PostAdd,
+                    hasCustomFile = book6Uri != null,
                     modifier = Modifier.fillMaxWidth().weight(1f),
                     onClick = {
+                        if (book6Uri != null) {
+                            try {
+                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                                    setDataAndType(Uri.parse(book6Uri), if (book6Uri!!.contains(".pdf", true)) "application/pdf" else "image/*")
+                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(intent)
+                            } catch (_: Exception) {
+                                inputDialogTitle = if (book6Title != "Add Book 6") book6Title else ""
+                                selectedFileUri = book6Uri
+                                editingBookIndex = 6
+                            }
+                        } else {
+                            inputDialogTitle = if (book6Title != "Add Book 6") book6Title else ""
+                            selectedFileUri = book6Uri
+                            editingBookIndex = 6
+                        }
+                    },
+                    onReplace = {
                         inputDialogTitle = if (book6Title != "Add Book 6") book6Title else ""
+                        selectedFileUri = book6Uri
                         editingBookIndex = 6
                     }
                 )
@@ -589,8 +848,10 @@ private fun SpokenBookRowCard(
     primaryColor: Color,
     secondaryColor: Color,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
+    hasCustomFile: Boolean = false,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onReplace: () -> Unit
 ) {
     // Elegant Translucent Glassmorphism Card (Exact replica of Image 2 My Library Category Card)
     Card(
@@ -606,13 +867,13 @@ private fun SpokenBookRowCard(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.White.copy(alpha = 0.14f))
-                .padding(horizontal = 14.dp, vertical = 6.dp),
+                .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Icon Badge with Gradient and subtle shadow
             Box(
                 modifier = Modifier
-                    .size(42.dp)
+                    .size(40.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(
                         Brush.linearGradient(
@@ -630,18 +891,30 @@ private fun SpokenBookRowCard(
                 )
             }
 
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
             // Titles
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = SubikshaNavy,
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = title,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = SubikshaNavy,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (hasCustomFile) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Custom Attached",
+                            tint = Color(0xFF10B981),
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = subtitle,
@@ -653,7 +926,25 @@ private fun SpokenBookRowCard(
                 )
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(6.dp))
+
+            // Replace / Edit Button
+            IconButton(
+                onClick = onReplace,
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(primaryColor.copy(alpha = 0.10f))
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "Replace Book",
+                    tint = primaryColor,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(4.dp))
 
             // Elegant Glass Count Badge
             Surface(
@@ -666,11 +957,11 @@ private fun SpokenBookRowCard(
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = primaryColor,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(4.dp))
 
             // Arrow
             Icon(

@@ -126,9 +126,15 @@ object OcrLessonStorage {
         val qaArray = org.json.JSONArray()
         result.questionAnswers.forEach { qa ->
             val obj = org.json.JSONObject()
-            obj.put("q", qa.question)
-            obj.put("a", qa.answer)
-            obj.put("t", qa.explanationTamil)
+            obj.put("num", qa.questionNumber)
+            obj.put("type", qa.questionType)
+            obj.put("qEn", qa.questionEnglish)
+            obj.put("qTa", qa.questionTamil)
+            obj.put("aEn", qa.answerEnglish)
+            obj.put("aTa", qa.answerTamil)
+            obj.put("steps", org.json.JSONArray(qa.stepByStepWorking))
+            obj.put("prac", qa.practicalApplication)
+            obj.put("concept", qa.conceptExplanation)
             qaArray.put(obj)
         }
         editor.putString(KEY_QA_JSON, qaArray.toString())
@@ -179,7 +185,23 @@ object OcrLessonStorage {
             val questionAnswers = mutableListOf<OcrQuestionAnswer>()
             for (i in 0 until qaArray.length()) {
                 val obj = qaArray.getJSONObject(i)
-                questionAnswers.add(OcrQuestionAnswer(obj.optString("q"), obj.optString("a"), obj.optString("t")))
+                val stepsArr = obj.optJSONArray("steps") ?: org.json.JSONArray()
+                val stepsList = mutableListOf<String>()
+                for (s in 0 until stepsArr.length()) stepsList.add(stepsArr.getString(s))
+
+                questionAnswers.add(
+                    OcrQuestionAnswer(
+                        questionNumber = obj.optString("num", "${i + 1}"),
+                        questionType = obj.optString("type", "வினா"),
+                        questionEnglish = obj.optString("qEn"),
+                        questionTamil = obj.optString("qTa"),
+                        answerEnglish = obj.optString("aEn"),
+                        answerTamil = obj.optString("aTa"),
+                        stepByStepWorking = stepsList,
+                        practicalApplication = obj.optString("prac"),
+                        conceptExplanation = obj.optString("concept")
+                    )
+                )
             }
 
             return OcrResult(
@@ -592,7 +614,7 @@ fun ImageToTextScreen(
                     Spacer(modifier = Modifier.width(6.dp))
 
                     IconButton(
-                        onClick = { onAskGemini("இந்தப் புத்தக உரையை மேலும் ஆழமாக எனக்குத் தமிழில் விளக்குங்கள்:\n${ocrResult.rawEnglishText}") },
+                        onClick = { onAskGemini("இந்தப் புத்தக உரையை மேலும் ஆழமாக எனக்குத் தமிழில் விளக்குங்கள்:\n${ocrResult?.rawEnglishText ?: ""}") },
                         modifier = Modifier
                             .size(40.dp)
                             .clip(CircleShape)
@@ -692,7 +714,7 @@ fun ImageToTextScreen(
                                 when (selectedTab) {
                                     OcrTab.EXTRACTED_TEXT -> {
                                         ExtractedTextTabContent(
-                                            activeResult = activeResult,
+                                            ocrResult = activeResult,
                                             onEdit = { showEditDialog = true },
                                             onSpeak = { speak(activeResult.rawEnglishText, isTamil = false) },
                                             onCopy = { copyToClipboard("அசல் ஆங்கில உரை", activeResult.rawEnglishText) },

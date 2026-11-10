@@ -74,6 +74,135 @@ enum class ScannerEngine(val title: String, val subtitle: String) {
     ML_KIT("📱 ML Kit", "ஆஃப்லைன்")
 }
 
+
+// =====================================================================
+// PERSISTENT LESSON STORAGE HELPER (Stores last uploaded lesson)
+// =====================================================================
+object OcrLessonStorage {
+    private const val PREF_NAME = "subiksha_saved_ocr_lesson_prefs"
+    private const val KEY_HAS_SAVED = "has_saved_lesson"
+    private const val KEY_HEADING = "saved_heading"
+    private const val KEY_RAW_TEXT = "saved_raw_text"
+    private const val KEY_PARAGRAPHS = "saved_paragraphs"
+    private const val KEY_KEYWORDS_JSON = "saved_keywords_json"
+    private const val KEY_EXP_HEADING = "saved_exp_heading"
+    private const val KEY_EXP_CENTRAL = "saved_exp_central"
+    private const val KEY_EXP_PARAGRAPHS = "saved_exp_paragraphs"
+    private const val KEY_EXP_PRACTICAL = "saved_exp_practical"
+    private const val KEY_EXP_QUESTION = "saved_exp_question"
+    private const val KEY_TRANSLATION = "saved_translation"
+    private const val KEY_QA_JSON = "saved_qa_json"
+
+    fun saveLesson(context: android.content.Context, result: OcrResult) {
+        val prefs = context.getSharedPreferences(PREF_NAME, android.content.Context.MODE_PRIVATE)
+        val editor = prefs.edit()
+        editor.putBoolean(KEY_HAS_SAVED, true)
+        editor.putString(KEY_HEADING, result.originalHeading)
+        editor.putString(KEY_RAW_TEXT, result.rawEnglishText)
+        editor.putString(KEY_PARAGRAPHS, org.json.JSONArray(result.paragraphs).toString())
+
+        // Save keywords JSON
+        val kwArray = org.json.JSONArray()
+        result.keyWords.forEach { kw ->
+            val obj = org.json.JSONObject()
+            obj.put("eng", kw.english)
+            obj.put("tam", kw.tamil)
+            obj.put("pos", kw.partOfSpeech)
+            kwArray.put(obj)
+        }
+        editor.putString(KEY_KEYWORDS_JSON, kwArray.toString())
+
+        // Save detailed explanation
+        editor.putString(KEY_EXP_HEADING, result.detailedExplanation.headingTamil)
+        editor.putString(KEY_EXP_CENTRAL, result.detailedExplanation.centralIdea)
+        editor.putString(KEY_EXP_PARAGRAPHS, org.json.JSONArray(result.detailedExplanation.paragraphsExplanation).toString())
+        editor.putString(KEY_EXP_PRACTICAL, result.detailedExplanation.practicalApplication)
+        editor.putString(KEY_EXP_QUESTION, result.detailedExplanation.reflectionQuestion)
+
+        // Save translation
+        editor.putString(KEY_TRANSLATION, result.fullTamilTranslation)
+
+        // Save Question Answers JSON
+        val qaArray = org.json.JSONArray()
+        result.questionAnswers.forEach { qa ->
+            val obj = org.json.JSONObject()
+            obj.put("q", qa.question)
+            obj.put("a", qa.answer)
+            obj.put("t", qa.explanationTamil)
+            qaArray.put(obj)
+        }
+        editor.putString(KEY_QA_JSON, qaArray.toString())
+
+        editor.apply()
+    }
+
+    fun loadSavedLesson(context: android.content.Context): OcrResult? {
+        val prefs = context.getSharedPreferences(PREF_NAME, android.content.Context.MODE_PRIVATE)
+        if (!prefs.getBoolean(KEY_HAS_SAVED, false)) return null
+
+        try {
+            val heading = prefs.getString(KEY_HEADING, "") ?: ""
+            val rawText = prefs.getString(KEY_RAW_TEXT, "") ?: ""
+
+            val pArray = org.json.JSONArray(prefs.getString(KEY_PARAGRAPHS, "[]") ?: "[]")
+            val paragraphs = mutableListOf<String>()
+            for (i in 0 until pArray.length()) paragraphs.add(pArray.getString(i))
+
+            val kwJson = prefs.getString(KEY_KEYWORDS_JSON, "[]") ?: "[]"
+            val kwArray = org.json.JSONArray(kwJson)
+            val keyWords = mutableListOf<OcrKeyWord>()
+            for (i in 0 until kwArray.length()) {
+                val obj = kwArray.getJSONObject(i)
+                keyWords.add(OcrKeyWord(obj.optString("eng"), obj.optString("tam"), obj.optString("pos")))
+            }
+
+            val expHeading = prefs.getString(KEY_EXP_HEADING, "") ?: ""
+            val expCentral = prefs.getString(KEY_EXP_CENTRAL, "") ?: ""
+            val expPArray = org.json.JSONArray(prefs.getString(KEY_EXP_PARAGRAPHS, "[]") ?: "[]")
+            val expParagraphs = mutableListOf<String>()
+            for (i in 0 until expPArray.length()) expParagraphs.add(expPArray.getString(i))
+            val expPractical = prefs.getString(KEY_EXP_PRACTICAL, "") ?: ""
+            val expQuestion = prefs.getString(KEY_EXP_QUESTION, "") ?: ""
+
+            val explanation = OcrExplanation(
+                headingTamil = expHeading,
+                centralIdea = expCentral,
+                paragraphsExplanation = expParagraphs,
+                practicalApplication = expPractical,
+                reflectionQuestion = expQuestion
+            )
+
+            val translation = prefs.getString(KEY_TRANSLATION, "") ?: ""
+
+            val qaJson = prefs.getString(KEY_QA_JSON, "[]") ?: "[]"
+            val qaArray = org.json.JSONArray(qaJson)
+            val questionAnswers = mutableListOf<OcrQuestionAnswer>()
+            for (i in 0 until qaArray.length()) {
+                val obj = qaArray.getJSONObject(i)
+                questionAnswers.add(OcrQuestionAnswer(obj.optString("q"), obj.optString("a"), obj.optString("t")))
+            }
+
+            return OcrResult(
+                originalHeading = heading,
+                rawEnglishText = rawText,
+                paragraphs = paragraphs,
+                keyWords = keyWords,
+                detailedExplanation = explanation,
+                fullTamilTranslation = translation,
+                questionAnswers = questionAnswers
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        }
+    }
+
+    fun clearLesson(context: android.content.Context) {
+        val prefs = context.getSharedPreferences(PREF_NAME, android.content.Context.MODE_PRIVATE)
+        prefs.edit().clear().apply()
+    }
+}
+
 @Composable
 fun ImageToTextScreen(
     onBackClick: () -> Unit,
@@ -88,7 +217,8 @@ fun ImageToTextScreen(
     // State management
     var selectedTab by remember { mutableStateOf(OcrTab.EXTRACTED_TEXT) }
     var selectedEngine by remember { mutableStateOf(ScannerEngine.GEMINI_AI) }
-    var ocrResult by remember { mutableStateOf(ImageOcrProcessor.referenceBookResult) }
+    val savedLesson = remember { OcrLessonStorage.loadSavedLesson(context) }
+    var ocrResult by remember { mutableStateOf<OcrResult?>(savedLesson) }
     var capturedBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var isProcessing by remember { mutableStateOf(false) }
@@ -96,7 +226,7 @@ fun ImageToTextScreen(
     var showEditDialog by remember { mutableStateOf(false) }
     var showKeyDialog by remember { mutableStateOf(false) }
     var showQuotaDialog by remember { mutableStateOf(false) }
-    var editedText by remember { mutableStateOf(ocrResult.rawEnglishText) }
+    var editedText by remember { mutableStateOf(savedLesson?.rawEnglishText ?: "") }
     var hasValidKey by remember { mutableStateOf(apiKeyManager.getApiKey().isNotBlank()) }
 
     // Theme palette matching User Technical Spec & CSS
@@ -177,8 +307,10 @@ fun ImageToTextScreen(
                 .addOnSuccessListener { visionText ->
                     val ocrRaw = visionText.text.trim()
                     if (ocrRaw.isNotEmpty()) {
-                        ocrResult = ImageOcrProcessor.buildFallbackResult(ocrRaw)
-                        editedText = ocrResult.rawEnglishText
+                        val builtResult = ImageOcrProcessor.buildFallbackResult(ocrRaw)
+                        ocrResult = builtResult
+                        editedText = builtResult.rawEnglishText
+                        OcrLessonStorage.saveLesson(context, builtResult)
                         Toast.makeText(context, "$reasonMessage: ஆஃப்லைன் உரை பெறப்பட்டது.", Toast.LENGTH_SHORT).show()
                     } else {
                         Toast.makeText(context, "படத்தில் உரை எதுவும் கண்டறியப்படவில்லை.", Toast.LENGTH_LONG).show()
@@ -263,6 +395,7 @@ fun ImageToTextScreen(
             aiResult.onSuccess { structuredResult ->
                 ocrResult = structuredResult
                 editedText = structuredResult.rawEnglishText
+                OcrLessonStorage.saveLesson(context, structuredResult)
                 selectedTab = if (structuredResult.questionAnswers.isNotEmpty()) {
                     OcrTab.QUESTIONS_ANSWERS
                 } else {
@@ -431,18 +564,15 @@ fun ImageToTextScreen(
 
                     Spacer(modifier = Modifier.width(6.dp))
 
-                    // Demo Switcher
+                    // New Lesson Button
                     IconButton(
                         onClick = {
                             capturedBitmap = null
                             selectedImageUri = null
-                            ocrResult = if (ocrResult.originalHeading == ImageOcrProcessor.referenceBookResult.originalHeading) {
-                                ImageOcrProcessor.scienceSample
-                            } else {
-                                ImageOcrProcessor.referenceBookResult
-                            }
-                            editedText = ocrResult.rawEnglishText
-                            Toast.makeText(context, "மாதிரிப் புத்தகம் மாற்றப்பட்டது!", Toast.LENGTH_SHORT).show()
+                            ocrResult = null
+                            editedText = ""
+                            OcrLessonStorage.clearLesson(context)
+                            Toast.makeText(context, "புதிய பாடம் தொடங்கலாம்! கேமரா/கேலரி மூலம் படம் எடுக்கவும்.", Toast.LENGTH_SHORT).show()
                         },
                         modifier = Modifier
                             .size(40.dp)
@@ -452,8 +582,8 @@ fun ImageToTextScreen(
                             .testTag("ocr_sample_switch_btn")
                     ) {
                         Icon(
-                            imageVector = Icons.Default.CollectionsBookmark,
-                            contentDescription = "Switch Sample",
+                            imageVector = Icons.Default.AddPhotoAlternate,
+                            contentDescription = "New Lesson",
                             tint = mauveHeader,
                             modifier = Modifier.size(20.dp)
                         )
@@ -537,6 +667,8 @@ fun ImageToTextScreen(
                         )
                     }
 
+                    if (ocrResult != null) {
+                        val activeResult = ocrResult!!
                     // 5 Interactive Navigation Tabs
                     item {
                         OcrTabsRow(
@@ -560,10 +692,10 @@ fun ImageToTextScreen(
                                 when (selectedTab) {
                                     OcrTab.EXTRACTED_TEXT -> {
                                         ExtractedTextTabContent(
-                                            ocrResult = ocrResult,
+                                            activeResult = activeResult,
                                             onEdit = { showEditDialog = true },
-                                            onSpeak = { speak(ocrResult.rawEnglishText, isTamil = false) },
-                                            onCopy = { copyToClipboard("அசல் ஆங்கில உரை", ocrResult.rawEnglishText) },
+                                            onSpeak = { speak(activeResult.rawEnglishText, isTamil = false) },
+                                            onCopy = { copyToClipboard("அசல் ஆங்கில உரை", activeResult.rawEnglishText) },
                                             accentColor = mauveHeader,
                                             deepTextColor = deepTextColor
                                         )
@@ -571,10 +703,10 @@ fun ImageToTextScreen(
 
                                     OcrTab.KEY_WORDS -> {
                                         KeyWordsTabContent(
-                                            keyWords = ocrResult.keyWords,
+                                            keyWords = activeResult.keyWords,
                                             onSpeakWord = { word -> speak(word, word, isTamil = false) },
                                             onSpeakAll = {
-                                                val allWords = ocrResult.keyWords.joinToString(". ") { it.english }
+                                                val allWords = activeResult.keyWords.joinToString(". ") { it.english }
                                                 speak(allWords, isTamil = false)
                                             },
                                             speakingWord = speakingWord,
@@ -585,21 +717,21 @@ fun ImageToTextScreen(
 
                                     OcrTab.EXPLANATION -> {
                                         ExplanationTabContent(
-                                            explanation = ocrResult.detailedExplanation,
+                                            explanation = activeResult.detailedExplanation,
                                             onSpeakCoreConcept = {
-                                                val text = "${ocrResult.detailedExplanation.headingTamil}. மையக் கருத்து: ${ocrResult.detailedExplanation.centralIdea}"
+                                                val text = "${activeResult.detailedExplanation.headingTamil}. மையக் கருத்து: ${activeResult.detailedExplanation.centralIdea}"
                                                 speak(text, isTamil = true)
                                             },
                                             onSpeakDetailed = {
                                                 val detailedText = "விரிவான கருத்து விளக்கம் மற்றும் விடைகள். " +
-                                                    ocrResult.detailedExplanation.paragraphsExplanation.joinToString(". ")
+                                                    activeResult.detailedExplanation.paragraphsExplanation.joinToString(". ")
                                                 speak(detailedText, isTamil = true)
                                             },
                                             onSpeakItem = { itemText ->
                                                 speak(itemText, isTamil = true)
                                             },
                                             onSpeakPractical = {
-                                                val practicalText = "அன்றாட வாழ்வில் பயன்பாடு. " + ocrResult.detailedExplanation.practicalApplication
+                                                val practicalText = "அன்றாட வாழ்வில் பயன்பாடு. " + activeResult.detailedExplanation.practicalApplication
                                                 speak(practicalText, isTamil = true)
                                             },
                                             accentColor = mauveHeader,
@@ -609,8 +741,8 @@ fun ImageToTextScreen(
 
                                     OcrTab.TAMIL_TRANSLATION -> {
                                         TamilTranslationTabContent(
-                                            translation = ocrResult.fullTamilTranslation,
-                                            onSpeak = { speak(ocrResult.fullTamilTranslation, isTamil = true) },
+                                            translation = activeResult.fullTamilTranslation,
+                                            onSpeak = { speak(activeResult.fullTamilTranslation, isTamil = true) },
                                             accentColor = mauveHeader,
                                             deepTextColor = deepTextColor
                                         )
@@ -618,19 +750,19 @@ fun ImageToTextScreen(
 
                                     OcrTab.QUESTIONS_ANSWERS -> {
                                         QuestionsAnswersTabContent(
-                                            questionAnswers = ocrResult.questionAnswers,
+                                            questionAnswers = activeResult.questionAnswers,
                                             onSpeakQuestionEn = { q -> speak(q, isTamil = false) },
                                             onSpeakQuestionTa = { q -> speak(q, isTamil = true) },
                                             onSpeakAnswerEn = { a -> speak(a, isTamil = false) },
                                             onSpeakAnswerTa = { a -> speak(a, isTamil = true) },
                                             onSpeakAllEn = {
-                                                val allText = ocrResult.questionAnswers.joinToString(". ") {
+                                                val allText = activeResult.questionAnswers.joinToString(". ") {
                                                     "Question ${it.questionNumber}. ${it.questionEnglish}. Answer: ${it.answerEnglish}"
                                                 }
                                                 speak(allText, isTamil = false)
                                             },
                                             onSpeakAllTa = {
-                                                val allText = ocrResult.questionAnswers.joinToString(". ") {
+                                                val allText = activeResult.questionAnswers.joinToString(". ") {
                                                     "வினா ${it.questionNumber}. ${it.questionTamil}. விடை: ${it.answerTamil}. ${it.conceptExplanation}"
                                                 }
                                                 speak(allText, isTamil = true)
@@ -643,8 +775,11 @@ fun ImageToTextScreen(
                             }
                         }
                     }
+                    }
                 }
 
+                if (ocrResult != null) {
+                    val activeResult = ocrResult!!
                 // Bottom Action Button with Mauve Linear Gradient
                 Box(
                     modifier = Modifier
@@ -654,18 +789,18 @@ fun ImageToTextScreen(
                     Button(
                         onClick = {
                             when (selectedTab) {
-                                OcrTab.TAMIL_TRANSLATION -> copyToClipboard("தமிழ் மொழிபெயர்ப்பு", ocrResult.fullTamilTranslation)
-                                OcrTab.EXTRACTED_TEXT -> copyToClipboard("ஆங்கில உரை", ocrResult.rawEnglishText)
+                                OcrTab.TAMIL_TRANSLATION -> copyToClipboard("தமிழ் மொழிபெயர்ப்பு", activeResult.fullTamilTranslation)
+                                OcrTab.EXTRACTED_TEXT -> copyToClipboard("ஆங்கில உரை", activeResult.rawEnglishText)
                                 OcrTab.KEY_WORDS -> {
-                                    val text = ocrResult.keyWords.joinToString("\n") { "${it.english} — ${it.tamil}" }
+                                    val text = activeResult.keyWords.joinToString("\n") { "${it.english} — ${it.tamil}" }
                                     copyToClipboard("முக்கியச் சொற்கள்", text)
                                 }
                                 OcrTab.EXPLANATION -> {
-                                    val text = "${ocrResult.detailedExplanation.headingTamil}\n\n${ocrResult.detailedExplanation.centralIdea}\n\n${ocrResult.detailedExplanation.practicalApplication}"
+                                    val text = "${activeResult.detailedExplanation.headingTamil}\n\n${activeResult.detailedExplanation.centralIdea}\n\n${activeResult.detailedExplanation.practicalApplication}"
                                     copyToClipboard("விளக்கம்", text)
                                 }
                                 OcrTab.QUESTIONS_ANSWERS -> {
-                                    val text = ocrResult.questionAnswers.joinToString("\n\n") {
+                                    val text = activeResult.questionAnswers.joinToString("\n\n") {
                                         "Q${it.questionNumber} [${it.questionType}]: ${it.questionEnglish}\nகேள்வி: ${it.questionTamil}\nAnswer: ${it.answerEnglish}\nவிடை: ${it.answerTamil}"
                                     }
                                     copyToClipboard("பாட வினா-விடைகள்", text)
@@ -709,6 +844,7 @@ fun ImageToTextScreen(
                             )
                         }
                     }
+                }
                 }
             }
         }
@@ -889,7 +1025,7 @@ private fun ScannerEngineSwitch(
 @Composable
 private fun BookImagePreviewCard(
     bitmap: Bitmap?,
-    ocrResult: OcrResult,
+    ocrResult: OcrResult?,
     isProcessing: Boolean,
     processingStatus: String,
     buttonGradient: Brush,
@@ -944,7 +1080,7 @@ private fun BookImagePreviewCard(
                             .clip(RoundedCornerShape(12.dp)),
                         contentScale = ContentScale.Fit
                     )
-                } else {
+                } else if (ocrResult != null) {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Text(
                             text = ocrResult.originalHeading,
@@ -968,6 +1104,44 @@ private fun BookImagePreviewCard(
                             )
                         }
                     }
+                } else {
+                    // Empty state (Guidance card when no lesson is uploaded yet)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 18.dp, horizontal = 12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Surface(
+                            color = mauveHeader.copy(alpha = 0.12f),
+                            shape = CircleShape,
+                            modifier = Modifier.size(52.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.MenuBook,
+                                    contentDescription = null,
+                                    tint = mauveHeader,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "பாடப் புத்தகத்தை பதிவேற்றவும்",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = deepTextColor
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Camera, Gallery அல்லது PDF மூலம் பாடத்தைத் தேர்வு செய்யவும்.\nநீங்கள் ஏற்றும் பாடம் அடுத்த பாடம் மாற்றும் வரை நிரந்தரமாக இருக்கும்.",
+                            fontSize = 12.sp,
+                            color = mauveHeader,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 16.sp
+                        )
+                    }
                 }
             }
 
@@ -985,7 +1159,7 @@ private fun BookImagePreviewCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (bitmap != null) "✓ புத்தகம் தயாராக உள்ளது" else "உதாரணப் புத்தகம்",
+                        text = if (bitmap != null) "✓ புத்தகம் தயாராக உள்ளது" else if (ocrResult != null) "✓ சேமிக்கப்பட்ட பாடம்" else "புதிய பாடம் தயார்",
                         fontSize = 12.sp,
                         color = mauveHeader,
                         fontStyle = FontStyle.Italic,

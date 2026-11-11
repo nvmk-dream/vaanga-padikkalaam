@@ -1,6 +1,14 @@
 package com.example.ui.screens
 
+import android.content.ContentValues
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
+import android.view.ViewGroup
+import android.webkit.WebChromeClient
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -39,8 +47,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import com.example.ui.theme.*
+import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -54,6 +65,7 @@ fun MyLibraryScreen(
 
     var selectedFolderId by remember { mutableStateOf<String?>(null) }
     var viewingDocument by remember { mutableStateOf<LibraryDocument?>(null) }
+    var activeHtmlBook by remember { mutableStateOf<LibraryDocument?>(null) }
     var showAddFileDialog by remember { mutableStateOf(false) }
 
     // State refresh trigger when new file is added/deleted
@@ -90,8 +102,19 @@ fun MyLibraryScreen(
         }
     }
 
+    if (activeHtmlBook != null) {
+        AathichudiHtmlReaderScreen(
+            title = activeHtmlBook!!.title,
+            htmlAssetPath = activeHtmlBook!!.htmlAssetPath ?: "aathichudi.html",
+            pdfAssetPath = activeHtmlBook!!.pdfAssetPath ?: "pdf/aathichudi_full_book.pdf",
+            onBack = { activeHtmlBook = null }
+        )
+        return
+    }
+
     BackHandler {
         when {
+            activeHtmlBook != null -> activeHtmlBook = null
             viewingDocument != null -> viewingDocument = null
             selectedFolderId != null -> selectedFolderId = null
             else -> onBackClick()
@@ -359,7 +382,23 @@ fun MyLibraryScreen(
                             DocumentCardItem(
                                 document = doc,
                                 accentColor = selectedFolder.primaryColor,
-                                onClick = { viewingDocument = doc },
+                                onClick = {
+                                    if (doc.fileType == DocumentType.HTML_BOOK) {
+                                        activeHtmlBook = doc
+                                    } else {
+                                        viewingDocument = doc
+                                    }
+                                },
+                                onReadHtml = {
+                                    activeHtmlBook = doc
+                                },
+                                onDownloadPdf = {
+                                    downloadPdfToDevice(
+                                        context,
+                                        doc.pdfAssetPath ?: "pdf/aathichudi_full_book.pdf",
+                                        "Avvaiyar_Aathichudi_Full_Book.pdf"
+                                    )
+                                },
                                 onDelete = {
                                     MyLibraryRepository.removeDocument(selectedFolder.id, doc.id)
                                     refreshKey++
@@ -711,66 +750,358 @@ private fun DocumentCardItem(
     document: LibraryDocument,
     accentColor: Color,
     onClick: () -> Unit,
+    onReadHtml: () -> Unit = {},
+    onDownloadPdf: () -> Unit = {},
     onDelete: () -> Unit
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .clickable { onClick() }
-            .testTag("doc_item_${document.id}"),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
+    if (document.fileType == DocumentType.HTML_BOOK) {
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .clip(RoundedCornerShape(16.dp))
+                .clickable { onClick() }
+                .testTag("doc_item_${document.id}"),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+            border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.35f))
         ) {
-            Surface(
-                color = if (document.fileType == DocumentType.PDF) Color(0xFFFEE2E2) else Color(0xFFDBEAFE),
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.size(44.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp)
             ) {
-                Box(contentAlignment = Alignment.Center) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        color = Color(0xFFD1FAE5),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.size(46.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.MenuBook,
+                                contentDescription = null,
+                                tint = Color(0xFF047857),
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = document.title,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = SubikshaNavy,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                color = Color(0xFFFEF3C7),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text(
+                                    text = "109 பாடல்கள்",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFB45309),
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = document.subtitle,
+                            fontSize = 11.5.sp,
+                            color = SubikshaTextMuted,
+                            lineHeight = 15.sp
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DeleteOutline,
+                            contentDescription = "Delete Document",
+                            tint = Color.Gray,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = onReadHtml,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF047857)),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(38.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AutoStories,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "படிக்க (Read)",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = onDownloadPdf,
+                        border = BorderStroke(1.2.dp, Color(0xFFDC2626)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFDC2626)),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(38.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Download,
+                            contentDescription = null,
+                            tint = Color(0xFFDC2626),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "PDF சேமி",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFDC2626)
+                        )
+                    }
+                }
+            }
+        }
+    } else {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .clickable { onClick() }
+                .testTag("doc_item_${document.id}"),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    color = if (document.fileType == DocumentType.PDF) Color(0xFFFEE2E2) else Color(0xFFDBEAFE),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = if (document.fileType == DocumentType.PDF) Icons.Default.PictureAsPdf else Icons.Default.Image,
+                            contentDescription = null,
+                            tint = if (document.fileType == DocumentType.PDF) Color(0xFFDC2626) else Color(0xFF2563EB),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = document.title,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = SubikshaNavy
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "${document.dateAdded} • ${document.sizeText}",
+                        fontSize = 11.sp,
+                        color = SubikshaTextMuted
+                    )
+                }
+
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(32.dp)
+                ) {
                     Icon(
-                        imageVector = if (document.fileType == DocumentType.PDF) Icons.Default.PictureAsPdf else Icons.Default.Image,
-                        contentDescription = null,
-                        tint = if (document.fileType == DocumentType.PDF) Color(0xFFDC2626) else Color(0xFF2563EB),
-                        modifier = Modifier.size(24.dp)
+                        imageVector = Icons.Default.DeleteOutline,
+                        contentDescription = "Delete Document",
+                        tint = Color.Gray,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.width(12.dp))
+// ==============================================================
+// ஔவையார் ஆத்திசூடி Mobile In-App HTML Reader Screen
+// ==============================================================
+@Composable
+fun AathichudiHtmlReaderScreen(
+    title: String = "ஔவையார் ஆத்திசூடி",
+    htmlAssetPath: String = "aathichudi.html",
+    pdfAssetPath: String = "pdf/aathichudi_full_book.pdf",
+    onBack: () -> Unit
+) {
+    val context = LocalContext.current
+    BackHandler { onBack() }
 
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = document.title,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = SubikshaNavy
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "${document.dateAdded} • ${document.sizeText}",
-                    fontSize = 11.sp,
-                    color = SubikshaTextMuted
-                )
-            }
-
-            IconButton(
-                onClick = onDelete,
-                modifier = Modifier.size(32.dp)
+    Scaffold(
+        topBar = {
+            Surface(
+                color = Color.White,
+                shadowElevation = 3.dp
             ) {
-                Icon(
-                    imageVector = Icons.Default.DeleteOutline,
-                    contentDescription = "Delete Document",
-                    tint = Color.Gray,
-                    modifier = Modifier.size(18.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .height(56.dp)
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = SubikshaNavy
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    Text(
+                        text = title,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = SubikshaNavy,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1
+                    )
+
+                    Button(
+                        onClick = {
+                            downloadPdfToDevice(
+                                context,
+                                pdfAssetPath,
+                                "Avvaiyar_Aathichudi_Full_Book.pdf"
+                            )
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF047857)),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Download,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "PDF சேமி",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
             }
         }
+    ) { innerPadding ->
+        AndroidView(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+            factory = { ctx ->
+                WebView(ctx).apply {
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                    settings.apply {
+                        javaScriptEnabled = true
+                        domStorageEnabled = true
+                        allowFileAccess = true
+                        allowContentAccess = true
+                        builtInZoomControls = true
+                        displayZoomControls = false
+                        useWideViewPort = true
+                        loadWithOverviewMode = true
+                        defaultTextEncodingName = "utf-8"
+                    }
+                    webViewClient = WebViewClient()
+                    webChromeClient = WebChromeClient()
+                    loadUrl("file:///android_asset/$htmlAssetPath")
+                }
+            }
+        )
+    }
+}
+
+// ==============================================================
+// Safe PDF Download Helper to Downloads Folder
+// ==============================================================
+fun downloadPdfToDevice(context: android.content.Context, assetPath: String, fileName: String) {
+    try {
+        val inputStream = context.assets.open(assetPath)
+        val success: Boolean
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val contentValues = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+            }
+            val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+            if (uri != null) {
+                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+                success = true
+            } else {
+                success = false
+            }
+        } else {
+            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            if (!downloadsDir.exists()) downloadsDir.mkdirs()
+            val destFile = File(downloadsDir, fileName)
+            FileOutputStream(destFile).use { outputStream ->
+                inputStream.copyTo(outputStream)
+            }
+            success = true
+        }
+
+        if (success) {
+            Toast.makeText(context, "ஔவையார் ஆத்திசூடி PDF Downloads பகுதியில் சேமிக்கப்பட்டது!", Toast.LENGTH_LONG).show()
+        } else {
+            Toast.makeText(context, "பதிவிறக்க முடியவில்லை, மீண்டும் முயலவும்", Toast.LENGTH_SHORT).show()
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        Toast.makeText(context, "பிழை: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
     }
 }

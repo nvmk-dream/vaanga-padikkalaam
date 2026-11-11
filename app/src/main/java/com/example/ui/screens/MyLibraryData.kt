@@ -7,7 +7,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 
 enum class DocumentType {
     PDF,
-    IMAGE
+    IMAGE,
+    HTML_BOOK
 }
 
 data class LibraryDocument(
@@ -19,7 +20,9 @@ data class LibraryDocument(
     val dateAdded: String,
     val pageCount: Int = 1,
     val sizeText: String = "1.2 MB",
-    val textSnippet: String = ""
+    val textSnippet: String = "",
+    val htmlAssetPath: String? = null,
+    val pdfAssetPath: String? = null
 )
 
 data class LibraryFolder(
@@ -49,6 +52,18 @@ object MyLibraryRepository {
                 primaryColor = Color(0xFF047857), // Emerald Green
                 secondaryColor = Color(0xFF10B981),
                 documents = mutableListOf(
+                    LibraryDocument(
+                        id = "tam_aathichudi",
+                        title = "ஔவையார் ஆத்திசூடி",
+                        subtitle = "109 பாடல்கள், சொற்பொருள், எளிய உரை & நற்பண்புகள்",
+                        fileType = DocumentType.HTML_BOOK,
+                        dateAdded = "11 Nov 2026",
+                        pageCount = 122,
+                        sizeText = "1.4 MB",
+                        textSnippet = "ஆத்தி சூடி அமர்ந்த தேவனை ஏத்தி ஏத்தித் தொழுவோம் யாமே. அறம் செய விரும்பு, ஆறுவது சினம்...",
+                        htmlAssetPath = "aathichudi.html",
+                        pdfAssetPath = "pdf/aathichudi_full_book.pdf"
+                    ),
                     LibraryDocument(
                         id = "tam_1",
                         title = "திருக்குறள் எளிய உரை",

@@ -384,99 +384,119 @@ fun MyLibraryScreen(
     // Document Viewer Dialog
     if (viewingDocument != null) {
         val doc = viewingDocument!!
-        Dialog(
-            onDismissRequest = { viewingDocument = null },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            Card(
-                shape = RoundedCornerShape(22.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                modifier = Modifier
-                    .fillMaxWidth(if (doc.fileType == DocumentType.HTML) 0.96f else 0.90f)
-                    .fillMaxHeight(if (doc.fileType == DocumentType.HTML) 0.92f else 0.85f)
-                    .padding(vertical = 8.dp)
-                    .shadow(12.dp, RoundedCornerShape(22.dp))
+        if (doc.fileType == DocumentType.HTML && doc.assetFilePath != null) {
+            // Full-Screen Edge-to-Edge HTML Reader (Part 2 outer Card, borders, badges, close button removed)
+            Dialog(
+                onDismissRequest = { viewingDocument = null },
+                properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
             ) {
-                Column(
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(20.dp)
+                        .background(Color.White)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    AndroidView(
+                        factory = { ctx ->
+                            WebView(ctx).apply {
+                                setBackgroundColor(android.graphics.Color.WHITE)
+                                settings.javaScriptEnabled = true
+                                settings.loadWithOverviewMode = true
+                                settings.useWideViewPort = true
+                                settings.domStorageEnabled = true
+                                webViewClient = WebViewClient()
+                                loadUrl(doc.assetFilePath)
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+
+                    // Floating close button at top right
+                    IconButton(
+                        onClick = { viewingDocument = null },
+                        modifier = Modifier
+                            .statusBarsPadding()
+                            .padding(top = 10.dp, end = 12.dp)
+                            .align(Alignment.TopEnd)
+                            .size(38.dp)
+                            .background(Color.Black.copy(alpha = 0.52f), CircleShape)
                     ) {
-                        Surface(
-                            color = if (doc.fileType == DocumentType.PDF) Color(0xFFEF4444).copy(alpha = 0.12f) else Color(0xFF3B82F6).copy(alpha = 0.12f),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                text = when (doc.fileType) {
-                                    DocumentType.PDF -> "📕 PDF புத்தகம்"
-                                    DocumentType.HTML -> "📖 தமிழ் வண்ணப் பாடம்"
-                                    else -> "🖼️ படக் குறிப்பு"
-                                },
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (doc.fileType == DocumentType.PDF) Color(0xFFDC2626) else Color(0xFF2563EB),
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                            )
-                        }
-
-                        IconButton(
-                            onClick = { viewingDocument = null },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = SubikshaTextMuted)
-                        }
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    Text(
-                        text = doc.title,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = SubikshaNavy
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = doc.subtitle,
-                        fontSize = 12.sp,
-                        color = SubikshaTextMuted
-                    )
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // Reading Page Simulation / Interactive HTML Reader
-                    if (doc.fileType == DocumentType.HTML && doc.assetFilePath != null) {
-                        Surface(
-                            color = Color.Transparent,
-                            shape = RoundedCornerShape(16.dp),
-                            border = null,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f)
+                }
+            }
+        } else {
+            Dialog(
+                onDismissRequest = { viewingDocument = null },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Card(
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    modifier = Modifier
+                        .fillMaxWidth(0.90f)
+                        .fillMaxHeight(0.85f)
+                        .padding(vertical = 8.dp)
+                        .shadow(12.dp, RoundedCornerShape(22.dp))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(20.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            AndroidView(
-                                factory = { ctx ->
-                                    WebView(ctx).apply {
-                                        setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                                        settings.javaScriptEnabled = true
-                                        settings.loadWithOverviewMode = true
-                                        settings.useWideViewPort = true
-                                        settings.domStorageEnabled = true
-                                        webViewClient = WebViewClient()
-                                        loadUrl(doc.assetFilePath)
-                                    }
-                                },
-                                modifier = Modifier.fillMaxSize()
-                            )
+                            Surface(
+                                color = if (doc.fileType == DocumentType.PDF) Color(0xFFEF4444).copy(alpha = 0.12f) else Color(0xFF3B82F6).copy(alpha = 0.12f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(
+                                    text = when (doc.fileType) {
+                                        DocumentType.PDF -> "📕 PDF புத்தகம்"
+                                        DocumentType.HTML -> "📖 தமிழ் வண்ணப் பாடம்"
+                                        else -> "🖼️ படக் குறிப்பு"
+                                    },
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (doc.fileType == DocumentType.PDF) Color(0xFFDC2626) else Color(0xFF2563EB),
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                )
+                            }
+
+                            IconButton(
+                                onClick = { viewingDocument = null },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = SubikshaTextMuted)
+                            }
                         }
-                    } else {
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Text(
+                            text = doc.title,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = SubikshaNavy
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Text(
+                            text = doc.subtitle,
+                            fontSize = 12.sp,
+                            color = SubikshaTextMuted
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
                         Surface(
                             color = Color(0xFFF8FAFC),
                             shape = RoundedCornerShape(12.dp),
@@ -501,38 +521,38 @@ fun MyLibraryScreen(
                                 )
                             }
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "தேதி: ${doc.dateAdded}",
-                            fontSize = 11.sp,
-                            color = SubikshaTextMuted
-                        )
-                        Text(
-                            text = "அளவு: ${doc.sizeText}",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = SubikshaNavy
-                        )
-                    }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "தேதி: ${doc.dateAdded}",
+                                fontSize = 11.sp,
+                                color = SubikshaTextMuted
+                            )
+                            Text(
+                                text = "அளவு: ${doc.sizeText}",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = SubikshaNavy
+                            )
+                        }
 
-                    Spacer(modifier = Modifier.height(18.dp))
+                        Spacer(modifier = Modifier.height(18.dp))
 
-                    Button(
-                        onClick = { viewingDocument = null },
-                        colors = ButtonDefaults.buttonColors(containerColor = SubikshaRoyalPurple),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(44.dp),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("மூடு (Close)", color = Color.White, fontWeight = FontWeight.Bold)
+                        Button(
+                            onClick = { viewingDocument = null },
+                            colors = ButtonDefaults.buttonColors(containerColor = SubikshaRoyalPurple),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("மூடு (Close)", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }

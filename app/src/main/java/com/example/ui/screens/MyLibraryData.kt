@@ -8,7 +8,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 enum class DocumentType {
     PDF,
     IMAGE,
-    HTML_BOOK
+    HTML
 }
 
 data class LibraryDocument(
@@ -21,8 +21,7 @@ data class LibraryDocument(
     val pageCount: Int = 1,
     val sizeText: String = "1.2 MB",
     val textSnippet: String = "",
-    val htmlAssetPath: String? = null,
-    val pdfAssetPath: String? = null
+    val assetFilePath: String? = null
 )
 
 data class LibraryFolder(
@@ -53,16 +52,15 @@ object MyLibraryRepository {
                 secondaryColor = Color(0xFF10B981),
                 documents = mutableListOf(
                     LibraryDocument(
-                        id = "tam_aathichudi",
-                        title = "ஔவையார் ஆத்திசூடி",
-                        subtitle = "109 பாடல்கள், சொற்பொருள், எளிய உரை & நற்பண்புகள்",
-                        fileType = DocumentType.HTML_BOOK,
-                        dateAdded = "11 Nov 2026",
-                        pageCount = 122,
-                        sizeText = "1.4 MB",
-                        textSnippet = "ஆத்தி சூடி அமர்ந்த தேவனை ஏத்தி ஏத்தித் தொழுவோம் யாமே. அறம் செய விரும்பு, ஆறுவது சினம்...",
-                        htmlAssetPath = "aathichudi.html",
-                        pdfAssetPath = "pdf/aathichudi_full_book.pdf"
+                        id = "tam_mayangoli",
+                        title = "📖 தமிழ் மயங்கொலிகள் – ர, ற கற்பித்தல் பாடத்திட்டம்",
+                        subtitle = "ஒலிக்கும் முறை, இலக்கண விதிகள், கதைகள் & வினாடி வினா",
+                        fileType = DocumentType.HTML,
+                        dateAdded = "12 Nov 2026",
+                        pageCount = 7,
+                        sizeText = "25 KB",
+                        textSnippet = "ரகரம் (ர), றகரம் (ற) ஆகியவற்றின் ஒலிப்பு வேறுபாடு, நாக்கின் அசைவு, பொருள் வேறுபாடு மற்றும் எளிய விளையாட்டு வழிப் பாடத்திட்டம்.",
+                        assetFilePath = "file:///android_asset/tamil_mayangoligal_lesson.html"
                     ),
                     LibraryDocument(
                         id = "tam_1",

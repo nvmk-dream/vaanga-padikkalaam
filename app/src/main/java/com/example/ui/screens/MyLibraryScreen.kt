@@ -454,9 +454,9 @@ fun MyLibraryScreen(
                     // Reading Page Simulation / Interactive HTML Reader
                     if (doc.fileType == DocumentType.HTML && doc.assetFilePath != null) {
                         Surface(
-                            color = Color(0xFFFFF1F2),
-                            shape = RoundedCornerShape(14.dp),
-                            border = BorderStroke(1.dp, Color(0xFFFDA4AF)),
+                            color = Color.Transparent,
+                            shape = RoundedCornerShape(16.dp),
+                            border = null,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
@@ -464,6 +464,7 @@ fun MyLibraryScreen(
                             AndroidView(
                                 factory = { ctx ->
                                     WebView(ctx).apply {
+                                        setBackgroundColor(android.graphics.Color.TRANSPARENT)
                                         settings.javaScriptEnabled = true
                                         settings.loadWithOverviewMode = true
                                         settings.useWideViewPort = true

@@ -52,6 +52,17 @@ object MyLibraryRepository {
                 secondaryColor = Color(0xFF10B981),
                 documents = mutableListOf(
                     LibraryDocument(
+                        id = "tam_mayangoli_nana",
+                        title = "📖 தமிழ் மயங்கொலிகள் - ந, ன, ண கற்பித்தல் பாடத்திட்டம்",
+                        subtitle = "நகர, னகர, ணகர உச்சரிப்பு, விதிகள், கதை & வினாடி வினா",
+                        fileType = DocumentType.HTML,
+                        dateAdded = "12 Nov 2026",
+                        pageCount = 6,
+                        sizeText = "255 KB",
+                        textSnippet = "ந (தந்நகரம்), ன (றன்னகரம்), ண (டண்ணகரம்) பிறக்கும் விதம், எழுத்து நண்பர்கள் கதை மற்றும் பொருள் வேறுபாடு பயிற்சி.",
+                        assetFilePath = "file:///android_asset/tamil_mayangoligal_na_na_na.html"
+                    ),
+                    LibraryDocument(
                         id = "tam_mayangoli",
                         title = "📖 தமிழ் மயங்கொலிகள் கற்பித்தல் புத்தகம்",
                         subtitle = "ல, ள, ழ | ர, ற | ந, ண, ன வேறுபாடுகள் & விதிகள்",

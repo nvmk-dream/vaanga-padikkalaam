@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -383,18 +384,22 @@ fun MyLibraryScreen(
     // Document Viewer Dialog
     if (viewingDocument != null) {
         val doc = viewingDocument!!
-        Dialog(onDismissRequest = { viewingDocument = null }) {
+        Dialog(
+            onDismissRequest = { viewingDocument = null },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
             Card(
                 shape = RoundedCornerShape(22.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp)
+                    .fillMaxWidth(if (doc.fileType == DocumentType.HTML) 0.96f else 0.90f)
+                    .fillMaxHeight(if (doc.fileType == DocumentType.HTML) 0.92f else 0.85f)
+                    .padding(vertical = 8.dp)
                     .shadow(12.dp, RoundedCornerShape(22.dp))
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .fillMaxSize()
                         .padding(20.dp)
                 ) {
                     Row(
@@ -454,7 +459,7 @@ fun MyLibraryScreen(
                             border = BorderStroke(1.dp, Color(0xFFFDA4AF)),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(380.dp)
+                                .weight(1f)
                         ) {
                             AndroidView(
                                 factory = { ctx ->
@@ -462,6 +467,7 @@ fun MyLibraryScreen(
                                         settings.javaScriptEnabled = true
                                         settings.loadWithOverviewMode = true
                                         settings.useWideViewPort = true
+                                        settings.domStorageEnabled = true
                                         webViewClient = WebViewClient()
                                         loadUrl(doc.assetFilePath)
                                     }

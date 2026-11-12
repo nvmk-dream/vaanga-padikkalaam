@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>தமிழ் மயங்கொலிகள் - புத்தக வடிவப் பாடத்திட்டம்</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Noto Sans Tamil', sans-serif;
+            color: #1e293b;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+            background-color: #fbcfe8;
+            background-image: url('data:image/jpeg;base64,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');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+        }
+        .book-container {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1.5px solid rgba(255, 255, 255, 0.85);
+            border-radius: 20px;
+            max-width: 820px;
+            width: 100%;
+            padding: 36px 28px;
+            box-shadow: 0 12px 36px rgba(219, 39, 119, 0.15), 0 4px 12px rgba(0, 0, 0, 0.06);
+            margin: 20px auto;
+        }
+        h1 {
+            text-align: center;
+            color: #831843;
+            margin-bottom: 28px;
+            font-size: 1.95rem;
+            border-bottom: 2px solid #fbcfe8;
+            padding-bottom: 12px;
+            font-weight: 700;
+        }
+        h2 {
+            color: #9d174d;
+            margin-top: 28px;
+            margin-bottom: 14px;
+            font-size: 1.38rem;
+            border-left: 4px solid #db2777;
+            padding-left: 12px;
+        }
+        h3 {
+            color: #701a75;
+            margin-top: 16px;
+            margin-bottom: 10px;
+            font-size: 1.15rem;
+        }
+        p, li {
+            font-size: 1.03rem;
+            line-height: 1.75;
+            color: #334155;
+            margin-bottom: 10px;
+            text-align: justify;
+        }
+        ul {
+            list-style-type: none;
+            margin-bottom: 20px;
+        }
+        ul li {
+            position: relative;
+            padding-left: 22px;
+            margin-bottom: 12px;
+        }
+        ul li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #db2777;
+            font-weight: bold;
+        }
+        .rule-box {
+            background: rgba(255, 255, 255, 0.75);
+            border-left: 4px solid #db2777;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 0 12px 12px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        }
+        .level-box {
+            background: rgba(255, 255, 255, 0.65);
+            border: 1px solid rgba(251, 207, 232, 0.8);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 14px;
+        }
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(244, 114, 182, 0.3);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            background-color: rgba(255, 255, 255, 0.85);
+            min-width: 580px;
+        }
+        th, td {
+            padding: 12px 15px;
+            border: 1px solid rgba(244, 114, 182, 0.3);
+            font-size: .96rem;
+            color: #334155;
+            line-height: 1.6;
+        }
+        th {
+            background-color: rgba(253, 242, 248, 0.95);
+            color: #831843;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: rgba(255, 255, 255, 0.6);
+        }
+        @media (max-width: 600px) {
+            body {
+                padding: 8px;
+            }
+            .book-container {
+                padding: 20px 14px;
+                margin: 8px auto;
+                border-radius: 16px;
+            }
+            h1 {
+                font-size: 1.45rem;
+            }
+            h2 {
+                font-size: 1.18rem;
+            }
+            p, li, th, td {
+                font-size: .95rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="book-container">
+        <h1>📖 தமிழ் மயங்கொலிகள் கற்பித்தல் புத்தகம்</h1>
+
+        <section>
+            <h2>1) ல, ள, ழ (லகர, ழகர, ளகர வேறுபாடுகள்) மற்றும் பிற எழுத்துகளின் பொருள் வேறுபாடு</h2>
+            <p>தமிழ் மொழியில் ஒரே மாதிரியான ஒலிப்பைக் கொண்ட இந்த மயங்கொலி எழுத்துகள், சொல்லில் மாறும்போது பொருளே முற்றிலும் மாறிவிடும்.</p>
+            
+            <h3>• ல vs ள vs ழ:</h3>
+            <ul>
+                <li><strong>அலகு</strong> = பறவையின் மூக்கு / அளவு | <strong>அளவு</strong> = அளவிடுதல் | <strong>அழகு</strong> = வனப்பு / நேர்த்தி</li>
+                <li><strong>விலை</strong> = பொருளின் மதிப்பு | <strong>விளை</strong> = உண்டாகுதல் (பயிர் விளைச்சல்) | <strong>விழை</strong> = விரும்புதல்</li>
+                <li><strong>கல்</strong> = பாறை | <strong>கள்</strong> = போதை பானம் / அஃறிணைப் பன்மை விகுதி</li>
+            </ul>
+
+            <h3>• ர vs ற:</h3>
+            <ul>
+                <li><strong>கரை</strong> = நதிக்கரை / ஓரம் | <strong>கறை</strong> = துணி மேல் படும் அழுக்கு</li>
+            </ul>
+
+            <h3>• மனம் vs மணம்:</h3>
+            <ul>
+                <li><strong>மனம்</strong> = உள்ளம் | <strong>மணம்</strong> = வாசனை</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>2) உச்சரிப்பு (ஒலிக்கும் முறை)</h2>
+            <ul>
+                <li><strong>ல (தகர லகரம்):</strong> நாக்கின் நுனி மேல்வாய் பற்களின் அடிப்பகுதியை (பல் ஈறு)த் தொடும்போது ஒலிக்கிறது.</li>
+                <li><strong>ள (ளகரம்):</strong> நாக்கின் நுனி வளைந்து மேல் அன்னத்தின் நடுப்பகுதியைத் தொடும்போது ஒலிக்கிறது.</li>
+                <li><strong>ழ (சிறப்பு ழகரம்):</strong> நாக்கு வளைந்து மேல் அன்னத்தின் அடிப்பகுதியைத் தடையின்றித் தழுவி, காற்று இதழினிடையே வரும்போது ஒலிக்கிறது.</li>
+                <li><strong>ந (தந்தநகரம்):</strong> நாக்கின் நுனி மேல்வாய் பற்களின் அடிப்பகுதியைத் தொடும்போது பிறக்கிறது.</li>
+                <li><strong>ண (டண்ணகரம்):</strong> நாக்கு வளைந்து அன்னத்தின் மேல் தலைப்பகுதியைத் தொடும்போது பிறக்கிறது.</li>
+                <li><strong>ன (றன்னகரம்):</strong> நாக்கின் நுனி மேல்வாய் பல்லின் அடிவாரத்தை ஒட்டி லேசாகத் தட்டி ஒலிக்கிறது.</li>
+                <li><strong>ர (இடையின ரகரம்):</strong> நுனிநாக்கு மேல்வாய் அன்னத்தை மிக மென்மையாக ஒரே ஒரு முறை வருடிக் கொடுக்கும்.</li>
+                <li><strong>ற (வல்லின றகரம்):</strong> நுனிநாக்கு மேல்அன்னத்தில் சற்று வலுவாகத் தட்டி அதிர்வுடன் ஒலிக்கிறது.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>3) தமிழ் இலக்கண விதிகளின்படி எங்கெல்லாம் பயன்படுத்தப்படும்?</h2>
+            <div class="rule-box">
+                <p><strong>விதி 1 (ந - தந்நகரம்):</strong> சொல்லின் இடையில் 'த' வரிசை எழுத்துகளுக்கு (த, தா, தி, தீ, து, தூ, தெ, தே, தை, தொ, தோ) முன்னால் மெய்யெழுத்தாக 'ந்த்' மட்டுமே வரும். <strong>எடுத்துக்காட்டு:</strong> பந்து, சந்தனம், வெந்தது, முந்துதல்.</p>
+            </div>
+            <div class="rule-box">
+                <p><strong>விதி 2 (ண - டண்ணகரம்):</strong> சொல்லின் இடையில் 'ட' வரிசை எழுத்துகளுக்கு (ட, டா, டி, டீ, டு, டூ, டெ, டே, டை, டொ, டோ) முன்னால் மெய்யெழுத்தாக 'ண்' மட்டுமே வரும். <strong>எடுத்துக்காட்டு:</strong> வண்டி, கண்டான், சுண்டல், வண்ணம்.</p>
+            </div>
+            <div class="rule-box">
+                <p><strong>விதி 3 (ன - றன்னகரம்):</strong> சொல்லின் இடையில் 'ற' வரிசை எழுத்துகளுக்கு (ற, றா, றி, றீ, று, றூ, றெ, றே, றை, றொ, றோ) முன்னால் மெய்யெழுத்தாக 'ன்' மட்டுமே வரும். <strong>எடுத்துக்காட்டு:</strong> கன்று, இன்று, நன்றி, மன்றம்.</p>
+            </div>
+            <div class="rule-box">
+                <p><strong>விதி 4 (முதன்மை எழுத்து விதி):</strong> தமிழ் இலக்கணப்படி 'ந' தவிர மற்ற எழுத்துகளான ண, ன, ர, ற, ல, ள, ழ ஆகியவை தூய தமிழ்ச் சொற்களின் முதலில் வரவே வராது.</p>
+            </div>
+            <div class="rule-box">
+                <p><strong>விதி 5 (ர, ல - பிறமொழி விதி):</strong> பிறமொழிச் சொற்களை தமிழில் எழுதும்போது 'ர, ல' எழுத்துகளுக்கு முன்னால் 'இ' அல்லது 'உ' சேர்த்து எழுத வேண்டும். <strong>எடுத்துக்காட்டு:</strong> இரயில் (Railway), உரோசா (Rose), இலண்டன் (London), உலோகம் (Metal).</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>4) குழந்தைகளுக்கான எளிய விளையாட்டு வழிப் பாடத்திட்டம்</h2>
+            
+            <div class="level-box">
+                <h3>🎨 நிலை 1: நாக்கு விளையாட்டு (உச்சரிப்புப் பயிற்சி)</h3>
+                <p>குழந்தைகளிடம் சொல்ல வேண்டிய எளிய உருவகங்கள்:</p>
+                <ul>
+                    <li><strong>ல (சின்ன ல) - "பல் தொடு 'ல'":</strong> "உங்க நாக்கோட நுனியைக் கொண்டு போய், முன் பற்களுக்கு பின்னாடி தொட்டு 'ல' சொல்லுங்க பார்க்கலாம்!"</li>
+                    <li><strong>ள (பெரிய ள) - "வளை 'ள'":</strong> "நாக்கை நல்லா மடிச்சு, வாயோட மேல் கூரையைத் தொட்டு 'ள' சொல்லுங்க!"</li>
+                    <li><strong>ழ (சிறப்பு ழ) - "வாழைப்பழ 'ழ'":</strong> "நாக்கை நல்லா மடிச்சு, ஆனா மேல் கூரையைத் தொடாமல் காத்துல மிதக்கவிட்டு 'ழ' சொல்லுங்க!"</li>
+                </ul>
+            </div>
+
+            <div class="level-box">
+                <h3>📖 நிலை 2: "எழுத்து நண்பர்கள்" கதை (இலக்கண விதிகள்)</h3>
+                <p><strong>கதை:</strong> தமிழ் காட்டுல மூணு நகர அண்ணன் தம்பிகள் இருந்தாங்க. அவங்களுக்குனு சில நெருங்கிய "பெஸ்ட் பிரண்ட்ஸ்" இருந்தாங்க.</p>
+                <ul>
+                    <li><strong>மூணு சுழி 'ண்' -க்கு 'ட்' தான் பெஸ்ட் பிரண்ட்:</strong> 'ண்' வந்தாலே அதுக்கு அடுத்து 'ட' வரிசைதான் வரும் (எ.கா: வண்டி, சுண்டல்).</li>
+                    <li><strong>ரெண்டு சுழி 'ன்' -க்கு 'ற்' தான் பெஸ்ட் பிரண்ட்:</strong> 'ன்' வந்தாலே அதுக்கு அடுத்து 'ற' வரிசைதான் வரும் (எ.கா: கன்று, நன்றி).</li>
+                    <li><strong>'ந்' -க்கு 'த்' தான் பெஸ்ட் பிரண்ட்:</strong> 'ந்' வந்தா அடுத்து 'த' வரிசைதான் வரும் (எ.கா: பந்து, சந்தனம்).</li>
+                </ul>
+            </div>
+
+            <div class="level-box">
+                <h3>🎮 நிலை 3: பொருள் வேறுபாடு விளையாட்டு & குட்டி வினாடி வினா</h3>
+                <p>குழந்தைகளுக்கு ஒரே ஒலியில் இருக்கும் இரு சொற்களைக் காட்டி நடித்துக் காட்டச் சொல்லி விளையாடலாம்.</p>
+                <p><strong>கோடிட்ட இடத்தை நிரப்புங்க செல்லங்களா:</strong></p>
+                <ol style="margin-left: 20px; margin-bottom: 15px; color: #334155;">
+                    <li>அம்மா சமையலுக்கு வ____டி (ண் / ன்) வாங்கினார்.</li>
+                    <li>தோட்டத்துச் செடியில் தக்காளி வி____ந்தது (லை / ளை).</li>
+                    <li>நம் நாட்டின் பெருமை த___ழ் (மிள் / மிழ்).</li>
+                    <li>சுட்டிப் பையன் ப___து (ந்து / ன்று) விளையாடினான்.</li>
+                </ol>
+            </div>
+        </section>
+
+        <section>
+            <h2>5) 📊 சுருக்கமான நினைவூட்டல் அட்டவணை</h2>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>எழுத்து</th>
+                            <th>சொல்லின் முதலில் வருமா?</th>
+                            <th>முக்கிய இலக்கண விதி / துணை எழுத்து</th>
+                            <th>கூடுதல் எடுத்துக்காட்டு சொற்கள்</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>ந</strong></td>
+                            <td><strong>ஆம்</strong><br>(நண்டு, நாடு)</td>
+                            <td>'த' வரிசைக்கு முன் 'ந்த்' வரும்.</td>
+                            <td>சந்தனம், தந்தை, வெந்தது, முந்து, சொந்தம்</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ண</strong></td>
+                            <td>இல்லை ❌</td>
+                            <td>'ட' வரிசைக்கு முன் 'ண்' வரும்.</td>
+                            <td>வண்டி, கண்டான், சுண்டல், வண்ணம், துணிவு</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ன</strong></td>
+                            <td>இல்லை ❌</td>
+                            <td>'ற' வரிசைக்கு முன் 'ன்' வரும்.</td>
+                            <td>கன்று, இன்று, நன்றி, மன்றம், தென்றல்</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ர</strong></td>
+                            <td>இல்லை<br>(இ/உ சேரும்)</td>
+                            <td>மென்மையாக வருட வேண்டும்; சொல்லின் முதலில் வராது.</td>
+                            <td>இரயில், இரவி, இரத்தினம், உரோமம், உரோசா</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ற</strong></td>
+                            <td>இல்லை ❌</td>
+                            <td>எப்போதும் சொல்லின் இடையிலோ அல்லது இரட்டித்தோ (ற்று) வரும்.</td>
+                            <td>காற்று, பற்று, கற்றல், பெற்றோர், கறை</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ல</strong></td>
+                            <td>இல்லை<br>(இ/உ சேரும்)</td>
+                            <td>பொதுவான தமிழ் மற்றும் பிறமொழிச் சொற்கள்.</td>
+                            <td>விலை, கல், அலகு, உலகம், மலர்</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ள</strong></td>
+                            <td>இல்லை ❌</td>
+                            <td>பன்மை மற்றும் கடின ஒலிச் சொற்கள்.</td>
+                            <td>விளை, கள், அளவு, வாள், அவர்கள்</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ழ</strong></td>
+                            <td>இல்லை ❌</td>
+                            <td>தமிழ், இயற்கை, பண்பாடு சார்ந்த தூய சொற்கள்.</td>
+                            <td>தமிழ், மழை, அழகு, வாழ்வு, யாழ்</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+</body>
+</html>

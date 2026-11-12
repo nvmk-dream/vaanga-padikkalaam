@@ -75,13 +75,14 @@ object MyLibraryRepository {
                     ),
                     LibraryDocument(
                         id = "tam_1",
-                        title = "திருக்குறள் எளிய உரை",
-                        subtitle = "அறத்துப்பால் மற்றும் பொருட்பால் விளக்கக் குறிப்பேடு",
-                        fileType = DocumentType.PDF,
-                        dateAdded = "26 Oct 2026",
-                        pageCount = 48,
-                        sizeText = "2.4 MB",
-                        textSnippet = "அகர முதல எழுத்தெல்லாம் ஆதி பகவன் முதற்றே உலகு."
+                        title = "📖 திருக்குறள் முழு தொகுப்பு (1330 குறள்கள்)",
+                        subtitle = "அறம், பொருள், இன்பம் – 133 அதிகாரங்கள் எளிய உரையுடன்",
+                        fileType = DocumentType.HTML,
+                        dateAdded = "12 Nov 2026",
+                        pageCount = 133,
+                        sizeText = "1.3 MB",
+                        textSnippet = "அகர முதல எழுத்தெல்லாம் ஆதி பகவன் முதற்றே உலகு. அனைத்து 1330 குறள்களும் சொல் விளக்கம், எளிய உரை, கதை மற்றும் நீதியுடன்.",
+                        assetFilePath = "file:///android_asset/thirukkural_1330_complete.html"
                     ),
                     LibraryDocument(
                         id = "tam_2",

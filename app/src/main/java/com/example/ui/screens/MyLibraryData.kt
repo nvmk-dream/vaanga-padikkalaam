@@ -53,14 +53,14 @@ object MyLibraryRepository {
                 documents = mutableListOf(
                     LibraryDocument(
                         id = "tam_mayangoli",
-                        title = "📖 தமிழ் மயங்கொலிகள் – ர, ற கற்பித்தல் பாடத்திட்டம்",
-                        subtitle = "ஒலிக்கும் முறை, இலக்கண விதிகள், கதைகள் & வினாடி வினா",
+                        title = "📖 தமிழ் மயங்கொலிகள் கற்பித்தல் புத்தகம்",
+                        subtitle = "ல, ள, ழ | ர, ற | ந, ண, ன வேறுபாடுகள் & விதிகள்",
                         fileType = DocumentType.HTML,
                         dateAdded = "12 Nov 2026",
-                        pageCount = 7,
-                        sizeText = "25 KB",
-                        textSnippet = "ரகரம் (ர), றகரம் (ற) ஆகியவற்றின் ஒலிப்பு வேறுபாடு, நாக்கின் அசைவு, பொருள் வேறுபாடு மற்றும் எளிய விளையாட்டு வழிப் பாடத்திட்டம்.",
-                        assetFilePath = "file:///android_asset/tamil_mayangoligal_lesson.html"
+                        pageCount = 8,
+                        sizeText = "39 KB",
+                        textSnippet = "ல, ள, ழ, ர, ற, ந, ண, ன மயங்கொலி வேறுபாடுகள், உச்சரிப்பு முறைகள், இலக்கண விதிகள் மற்றும் நாக்கு விளையாட்டுப் பாடத்திட்டம்.",
+                        assetFilePath = "file:///android_asset/tamil_mayangoligal_full_book.html"
                     ),
                     LibraryDocument(
                         id = "tam_1",
